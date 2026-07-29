@@ -26,6 +26,7 @@ export interface DropdownField {
 
 export interface DropdownCatalogResponse {
   fields: DropdownField[]
+  commissionPercent?: number
 }
 
 /** Build a Map for O(1) lookup by key instead of repeated .find() calls */
