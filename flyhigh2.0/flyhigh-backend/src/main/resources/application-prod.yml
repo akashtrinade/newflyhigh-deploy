@@ -1,0 +1,2 @@
+spring.data.mongodb.database=flyhigh_prod
+logging.level.com.flyhigh=WARN

@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.2.12</version>
+		<relativePath />
+	</parent>
+	<groupId>com.flyhigh</groupId>
+	<artifactId>flyhigh-backend</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>flyhigh-backend</name>
+	<description>FlyHigh Backend Service — Spring Boot on AWS Lambda</description>
+	<properties>
+		<java.version>21</java.version>
+		<aws-serverless-java-container.version>2.1.5</aws-serverless-java-container.version>
+	</properties>
+	<dependencies>
+		<!-- Spring Boot Starters -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-mongodb</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+
+		<!-- AWS Lambda adapter for Spring Boot 3 (replaces embedded Tomcat on Lambda) -->
+		<dependency>
+			<groupId>com.amazonaws.serverless</groupId>
+			<artifactId>aws-serverless-java-container-springboot3</artifactId>
+			<version>${aws-serverless-java-container.version}</version>
+		</dependency>
+
+		<!-- JWT -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>0.11.5</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>0.11.5</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId>
+			<version>0.11.5</version>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- Rate Limiting -->
+		<dependency>
+			<groupId>com.bucket4j</groupId>
+			<artifactId>bucket4j-core</artifactId>
+			<version>8.10.1</version>
+		</dependency>
+
+		<!-- Google Sign-In -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-oauth2-client</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.google.api-client</groupId>
+			<artifactId>google-api-client</artifactId>
+			<version>2.7.2</version>
+		</dependency>
+
+		<!-- Razorpay -->
+		<dependency>
+			<groupId>com.razorpay</groupId>
+			<artifactId>razorpay-java</artifactId>
+			<version>1.4.6</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.json</groupId>
+					<artifactId>json</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<!-- JSON (override razorpay's outdated 20160810 version for Java 21 compat) -->
+		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20240303</version>
+		</dependency>
+
+		<!-- Socket.IO Server -->
+		<dependency>
+			<groupId>com.corundumstudio.socketio</groupId>
+			<artifactId>netty-socketio</artifactId>
+			<version>2.0.12</version>
+		</dependency>
+
+		<!-- AWS SDK for signaling integration (session extension notifications) -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>apigatewaymanagementapi</artifactId>
+			<version>2.47.5</version>
+		</dependency>
+
+		<!-- AWS Secrets Manager — runtime secret resolution (avoids plaintext in env vars) -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>secretsmanager</artifactId>
+			<version>2.47.5</version>
+		</dependency>
+
+		<!-- Lombok -->
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- Test -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<!-- Maven Shade plugin: creates fat JAR for AWS Lambda -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>3.4.1</version>
+				<configuration>
+					<createDependencyReducedPom>false</createDependencyReducedPom>
+				</configuration>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<transformers>
+						<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+									<mainClass>com.flyhigh.backend.FlyhighBackendApplication</mainClass>
+								</transformer>
+							</transformers>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<compilerArgs>
+						<arg>--enable-preview</arg>
+					</compilerArgs>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+							<version>1.18.46</version>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>

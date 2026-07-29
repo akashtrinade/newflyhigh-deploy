@@ -1,0 +1,237 @@
+{
+ "Resources": {
+  "ConnectionsTable8000B8A1": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "connectionId",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "email",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "userId",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "email-index",
+      "KeySchema": [
+       {
+        "AttributeName": "email",
+        "KeyType": "HASH"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     },
+     {
+      "IndexName": "userId-index",
+      "KeySchema": [
+       {
+        "AttributeName": "userId",
+        "KeyType": "HASH"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "connectionId",
+      "KeyType": "HASH"
+     }
+    ],
+    "TableName": "flyhigh-staging-connections",
+    "TimeToLiveSpecification": {
+     "AttributeName": "ttl",
+     "Enabled": true
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-platform-staging/ConnectionsTable/Resource"
+   }
+  },
+  "RoomsTableA5C1D45B": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "roomId",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "roomId",
+      "KeyType": "HASH"
+     }
+    ],
+    "TableName": "flyhigh-staging-rooms",
+    "TimeToLiveSpecification": {
+     "AttributeName": "ttl",
+     "Enabled": true
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-platform-staging/RoomsTable/Resource"
+   }
+  },
+  "CredentialsF8F243AA": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": "FlyHigh backend credentials for staging",
+    "GenerateSecretString": {},
+    "Name": "flyhigh/staging/credentials"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-platform-staging/Credentials/Resource"
+   }
+  },
+  "BackendLogGroupDA10F1B2": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/aws/lambda/flyhigh-backend-staging",
+    "RetentionInDays": 90
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-platform-staging/BackendLogGroup/Resource"
+   }
+  },
+  "SignalingLogGroup586F6604": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/aws/lambda/flyhigh-signaling-staging",
+    "RetentionInDays": 90
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-platform-staging/SignalingLogGroup/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/zWMzQqDMBCEn8V73NpQfIEeeikUtPeyJluJP4lkk0oJefei0tN8wzeMBFmfoSpw5VLpsZxMB6kNqEaBK7+S/lqcne4gPbGbSFzfdocsmJSnwDNa7MlDave+DQ7KYnI9Q7q7/uZdXDbz55xFQ+yiV/vjI4Ylhiys0wQDnz6yhgtUxcDGlD7aYGaC5sgfF0VLo7EAAAA="
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-platform-staging/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "ConnectionsTableName": {
+   "Value": {
+    "Ref": "ConnectionsTable8000B8A1"
+   }
+  },
+  "RoomsTableName": {
+   "Value": {
+    "Ref": "RoomsTableA5C1D45B"
+   }
+  },
+  "CredentialsSecretArn": {
+   "Value": {
+    "Ref": "CredentialsF8F243AA"
+   }
+  },
+  "ExportsOutputRefCredentialsF8F243AABF433658": {
+   "Value": {
+    "Ref": "CredentialsF8F243AA"
+   },
+   "Export": {
+    "Name": "flyhigh-platform-staging:ExportsOutputRefCredentialsF8F243AABF433658"
+   }
+  },
+  "ExportsOutputFnGetAttConnectionsTable8000B8A1Arn6FD6777C": {
+   "Value": {
+    "Fn::GetAtt": [
+     "ConnectionsTable8000B8A1",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "flyhigh-platform-staging:ExportsOutputFnGetAttConnectionsTable8000B8A1Arn6FD6777C"
+   }
+  },
+  "ExportsOutputFnGetAttRoomsTableA5C1D45BArn3D85BB37": {
+   "Value": {
+    "Fn::GetAtt": [
+     "RoomsTableA5C1D45B",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "flyhigh-platform-staging:ExportsOutputFnGetAttRoomsTableA5C1D45BArn3D85BB37"
+   }
+  },
+  "ExportsOutputRefConnectionsTable8000B8A13717867F": {
+   "Value": {
+    "Ref": "ConnectionsTable8000B8A1"
+   },
+   "Export": {
+    "Name": "flyhigh-platform-staging:ExportsOutputRefConnectionsTable8000B8A13717867F"
+   }
+  },
+  "ExportsOutputRefRoomsTableA5C1D45BCB51EC57": {
+   "Value": {
+    "Ref": "RoomsTableA5C1D45B"
+   },
+   "Export": {
+    "Name": "flyhigh-platform-staging:ExportsOutputRefRoomsTableA5C1D45BCB51EC57"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

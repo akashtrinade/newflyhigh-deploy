@@ -1,0 +1,93 @@
+# =============================================
+#  FlyHigh Project - Root .gitignore
+# =============================================
+
+# ---------- OS generated files ----------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ---------- IDE / Editor configs ----------
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+.factorypath
+.hintrc
+nbproject/
+*.sublime-project
+*.sublime-workspace
+
+# ---------- Node.js ----------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+.npm/
+.yarn/
+!.yarn/patches
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+
+# ---------- Java / Maven / Spring Boot ----------
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+hs_err_pid*.log
+replay_pid*.log
+
+# ---------- Build outputs ----------
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+dist/
+
+# ---------- Environment & Secrets ----------
+.env
+.env.*
+!.env.example
+!.env.template
+
+# ---------- Uploads (user-generated content) ----------
+uploads/
+demo/uploads/
+
+# ---------- Scratch / Temp / Debug ----------
+scratch/
+*.tmp
+*.temp
+
+# ---------- Test artifacts ----------
+tests/node_modules/
+tests/after_click_verify.png
+
+# ---------- Old / backup scripts in root ----------
+expertNavbar_old.js
+expertNavbar_old.css
+expertNavbar_temp.js
+
+# ---------- Database reset scripts ----------
+flyhigh-signaling-server/resetExperts.cjs
+flyhigh-signaling-server/resetExpertsAtlas.js
+#  ----------- package-lock.json -------------
+**/package-lock.json

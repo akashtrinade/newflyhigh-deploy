@@ -1,0 +1,248 @@
+{
+  "/flyhigh-platform-staging": [
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:22:18)",
+        "...node internals, ts-node, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-platform-staging/ConnectionsTable": [
+    {
+      "type": "aws:cdk:hasPhysicalName",
+      "data": {
+        "Ref": "ConnectionsTable8000B8A1"
+      }
+    }
+  ],
+  "/flyhigh-platform-staging/RoomsTable": [
+    {
+      "type": "aws:cdk:hasPhysicalName",
+      "data": {
+        "Ref": "RoomsTableA5C1D45B"
+      }
+    }
+  ],
+  "/flyhigh-platform-staging/ConnectionsTableName": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ConnectionsTableName"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new PlatformStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\platform-stack.ts:83:5)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:22:18)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-platform-staging/RoomsTableName": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomsTableName"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new PlatformStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\platform-stack.ts:86:5)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:22:18)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-platform-staging/CredentialsSecretArn": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CredentialsSecretArn"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new PlatformStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\platform-stack.ts:89:5)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:22:18)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-platform-staging/BootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/flyhigh-platform-staging/CheckBootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CheckBootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/flyhigh-platform-staging/ConnectionsTable/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ConnectionsTable8000B8A1"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Table2 in aws-cdk-lib...",
+        "new PlatformStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\platform-stack.ts:28:29)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:22:18)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-platform-staging/RoomsTable/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomsTableA5C1D45B"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Table2 in aws-cdk-lib...",
+        "new PlatformStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\platform-stack.ts:51:23)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:22:18)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-platform-staging/Credentials/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CredentialsF8F243AA"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Secret2 in aws-cdk-lib...",
+        "new PlatformStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\platform-stack.ts:64:30)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:22:18)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-platform-staging/BackendLogGroup/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BackendLogGroupDA10F1B2"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new LogGroup2 in aws-cdk-lib...",
+        "new PlatformStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\platform-stack.ts:70:5)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:22:18)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-platform-staging/SignalingLogGroup/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SignalingLogGroup586F6604"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new LogGroup2 in aws-cdk-lib...",
+        "new PlatformStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\platform-stack.ts:76:5)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:22:18)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-platform-staging/CDKMetadata/Default": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CDKMetadata"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib, node internals...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/flyhigh-platform-staging/Exports/Output{\"Ref\":\"CredentialsF8F243AA\"}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputRefCredentialsF8F243AABF433658"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib, node internals...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/flyhigh-platform-staging/Exports/Output{\"Fn::GetAtt\":[\"ConnectionsTable8000B8A1\",\"Arn\"]}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputFnGetAttConnectionsTable8000B8A1Arn6FD6777C"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib, node internals...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/flyhigh-platform-staging/Exports/Output{\"Fn::GetAtt\":[\"RoomsTableA5C1D45B\",\"Arn\"]}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputFnGetAttRoomsTableA5C1D45BArn3D85BB37"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib, node internals...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/flyhigh-platform-staging/Exports/Output{\"Ref\":\"ConnectionsTable8000B8A1\"}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputRefConnectionsTable8000B8A13717867F"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib, node internals...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/flyhigh-platform-staging/Exports/Output{\"Ref\":\"RoomsTableA5C1D45B\"}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputRefRoomsTableA5C1D45BCB51EC57"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib, node internals...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ]
+}

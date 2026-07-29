@@ -1,0 +1,26 @@
+{
+  "app": "npx ts-node --prefer-ts-exts bin/app.ts",
+  "watch": {
+    "include": ["**"],
+    "exclude": ["README.md", "cdk*.json", "**/*.d.ts", "tsconfig.json", "package*.json", "node_modules"]
+  },
+  "context": {
+    "appName": "flyhigh",
+    "staging": {
+      "domain": "staging.flyhigh.com",
+      "backendMemory": 1024,
+      "signalingMemory": 256,
+      "provisionedConcurrency": 1,
+      "logLevel": "INFO",
+      "certificateArn": "PLACEHOLDER"
+    },
+    "production": {
+      "domain": "flyhigh.com",
+      "backendMemory": 2048,
+      "signalingMemory": 512,
+      "provisionedConcurrency": 5,
+      "logLevel": "WARN",
+      "certificateArn": "PLACEHOLDER"
+    }
+  }
+}

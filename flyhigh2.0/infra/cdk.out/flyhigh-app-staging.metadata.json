@@ -1,0 +1,636 @@
+{
+  "/flyhigh-app-staging": [
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node, ts-node..."
+      ]
+    },
+    {
+      "type": "aws:cdk:warning",
+      "data": "No cross-stack-reference strength configured, defaulting to \"strong\". We recommend you set feature flag \"@aws-cdk/core:defaultCrossStackReferences\" to \"both\", then deploy everywhere, then set it to \"weak\". Alternatively, set it to \"strong\" explicitly to lock in the current producer-protecting behavior. (See: https://github.com/aws/aws-cdk/blob/main/packages/aws-cdk-lib/README.md#reference-strength) [ack: @aws-cdk/core:crossStackReferencesDefaultStrong]",
+      "trace": [
+        "Annotations.addMessage (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\annotations.js:1:3441)",
+        "Annotations.addWarningV2 (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\annotations.js:1:2129)",
+        "resolveValue (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\private\\refs.js:1:6065)",
+        "resolveReferences (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\private\\refs.js:1:4778)",
+        "prepareApp (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\private\\prepare-app.js:1:1514)",
+        "synthesize (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\private\\synthesis.js:1:3701)",
+        "App.synth (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\stage.js:1:4636)",
+        "App.synth (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\app.js:1:4814)",
+        "process.<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\app.js:1:3773)",
+        "Object.onceWrapper (node:events:631:12)",
+        "process.emit (node:events:509:20)",
+        "process.emit.sharedData.processEmitHook.installedValue [as emit] (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\@cspotcode\\source-map-support\\source-map-support.js:745:40)"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/BackendLambda": [
+    {
+      "type": "aws:cdk:warning",
+      "data": "SnapStart only supports published Lambda versions. Ignore if function already has published versions. [ack: @aws-cdk/aws-lambda:snapStartRequirePublish]",
+      "trace": [
+        "Annotations.addMessage (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\annotations.js:1:3441)",
+        "Annotations.addWarningV2 (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\annotations.js:1:2129)",
+        "WrappedClass.configureSnapStart (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\aws-cdk-lib\\aws-lambda\\lib\\function.js:1:38078)",
+        "new Function2 (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\aws-cdk-lib\\aws-lambda\\lib\\function.js:1:21924)",
+        "new Function2 (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\prop-injectable.js:1:855)",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:50:27)",
+        "Object.<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "Module._compile (node:internal/modules/cjs/loader:1944:14)",
+        "Module.m._compile (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\ts-node\\src\\index.ts:1618:23)",
+        "node:internal/modules/cjs/loader:2084:10",
+        "Object.require.extensions.<computed> [as .ts] (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\ts-node\\src\\index.ts:1621:12)",
+        "Module.load (node:internal/modules/cjs/loader:1666:32)",
+        "Module._load (node:internal/modules/cjs/loader:1447:12)",
+        "wrapModuleLoad (node:internal/modules/cjs/loader:260:19)",
+        "Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)",
+        "phase4 (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\ts-node\\src\\bin.ts:649:14)",
+        "bootstrap (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\ts-node\\src\\bin.ts:95:10)",
+        "main (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\ts-node\\src\\bin.ts:55:10)",
+        "Object.<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\ts-node\\src\\bin.ts:800:3)",
+        "Module._compile (node:internal/modules/cjs/loader:1944:14)",
+        "Object.<anonymous> (node:internal/modules/cjs/loader:2084:10)",
+        "Module.load (node:internal/modules/cjs/loader:1666:32)",
+        "Module._load (node:internal/modules/cjs/loader:1447:12)",
+        "wrapModuleLoad (node:internal/modules/cjs/loader:260:19)",
+        "Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)",
+        "node:internal/main/run_main_module:33:47"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/Custom::S3AutoDeleteObjectsCustomResourceProvider": [
+    {
+      "type": "aws:cdk:is-custom-resource-handler-customResourceProvider",
+      "data": true
+    }
+  ],
+  "/flyhigh-app-staging/SpaBucketName": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SpaBucketName"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:224:5)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/CloudFrontDistributionId": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CloudFrontDistributionId"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:225:5)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/HttpApiUrl": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "HttpApiUrl"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:226:5)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/WsApiUrl": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsApiUrl"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:227:5)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/CloudFrontDomain": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CloudFrontDomain"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:228:5)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/BootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/CheckBootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CheckBootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/BackendLambda/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BackendLambdaD93C7B96"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Function2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:50:27)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/SignalingLambda/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SignalingLambdaFDA7557E"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Function2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:76:29)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/HttpApi/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "HttpApiF5A9A8A7"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new HttpApi2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:100:21)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/WebSocketApi/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebSocketApi34BCF99B"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new WebSocketApi2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:134:19)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/WebSocketStage/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebSocketStageC46B7E43"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new WebSocketStage2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:144:5)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/SpaBucket/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SpaBucket48E1059F"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Bucket2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:171:23)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    },
+    {
+      "type": "aws:cdk:analytics:mixin",
+      "data": {
+        "mixin": "aws-cdk-lib.aws_s3.mixins.BucketAutoDeleteObjects"
+      }
+    }
+  ],
+  "/flyhigh-app-staging/Custom::S3AutoDeleteObjectsCustomResourceProvider/Role": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/Custom::S3AutoDeleteObjectsCustomResourceProvider/Handler": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/SpaDistribution/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SpaDistributionD69C39B0"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Distribution2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:200:26)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/Backend5xxAlarm/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "Backend5xxAlarm3FBA78D9"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Alarm2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:205:5)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/Signaling5xxAlarm/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "Signaling5xxAlarm3BF6D462"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Alarm2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:213:5)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/CDKMetadata/Default": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CDKMetadata"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib, node internals...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/BackendLambda/ServiceRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BackendLambdaServiceRole98E4BC89"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Function2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:50:27)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/SignalingLambda/ServiceRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SignalingLambdaServiceRole930CCA2B"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Function2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:76:29)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/HttpApi/DefaultStage/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "HttpApiDefaultStage3EEB07D6"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new HttpApi2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:100:21)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/HttpApi/ANY--api--{proxy+}/BackendIntegration-Permission": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "HttpApiANYapiproxyBackendIntegrationPermission797D0BA4"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\aws-cdk-lib\\aws-apigatewayv2\\lib\\http\\api.js:1:96 in aws-cdk-lib...",
+        "Array.map (:)",
+        "...WrappedClass.<anonymous> in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:116:13)"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/HttpApi/ANY--api--{proxy+}/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "HttpApiANYapiproxy20978A2B"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\aws-cdk-lib\\aws-apigatewayv2\\lib\\http\\api.js:1:96 in aws-cdk-lib...",
+        "Array.map (:)",
+        "...WrappedClass.<anonymous> in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:116:13)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/WebSocketApi/$connect-Route/ConnectIntegration-Permission": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebSocketApiconnectRouteConnectIntegrationPermission39398969"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new WebSocketApi2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:134:19)"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/WebSocketApi/$connect-Route/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebSocketApiconnectRoute846149DD"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new WebSocketApi2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:134:19)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/WebSocketApi/$disconnect-Route/DisconnectIntegration-Permission": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebSocketApidisconnectRouteDisconnectIntegrationPermissionAE705904"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new WebSocketApi2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:134:19)"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/WebSocketApi/$disconnect-Route/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebSocketApidisconnectRouteC181A19C"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new WebSocketApi2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:134:19)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/WebSocketApi/$default-Route/DefaultIntegration-Permission": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebSocketApidefaultRouteDefaultIntegrationPermission0418F15D"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new WebSocketApi2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:134:19)"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/WebSocketApi/$default-Route/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebSocketApidefaultRoute05EFD2FA"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new WebSocketApi2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:134:19)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/SpaBucket/Policy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SpaBucketPolicy77D96634"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Bucket2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:171:23)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals..."
+      ]
+    },
+    {
+      "type": "aws:cdk:analytics:mixin",
+      "data": {
+        "mixin": "aws-cdk-lib.aws_s3.mixins.BucketPolicyStatements"
+      }
+    }
+  ],
+  "/flyhigh-app-staging/SpaBucket/AutoDeleteObjectsCustomResource/Default": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SpaBucketAutoDeleteObjectsCustomResourceDCF3398A"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/BackendLambda/ServiceRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BackendLambdaServiceRoleDefaultPolicy922C20D8"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.grantRead in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:71:23)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/SignalingLambda/ServiceRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SignalingLambdaServiceRoleDefaultPolicy414B2637"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/HttpApi/ANY--api--{proxy+}/BackendIntegration/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "HttpApiANYapiproxyBackendIntegration60EA3C2B"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\node_modules\\aws-cdk-lib\\aws-apigatewayv2\\lib\\http\\api.js:1:96 in aws-cdk-lib...",
+        "Array.map (:)",
+        "...WrappedClass.<anonymous> in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:116:13)"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/WebSocketApi/$connect-Route/ConnectIntegration/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebSocketApiconnectRouteConnectIntegration7F1E0FDE"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new WebSocketApi2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:134:19)"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/WebSocketApi/$disconnect-Route/DisconnectIntegration/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebSocketApidisconnectRouteDisconnectIntegration94C91381"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new WebSocketApi2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:134:19)"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/WebSocketApi/$default-Route/DefaultIntegration/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebSocketApidefaultRouteDefaultIntegration0865A209"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new WebSocketApi2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:134:19)"
+      ]
+    }
+  ],
+  "/flyhigh-app-staging/SpaDistribution/Origin1/S3OriginAccessControl/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SpaDistributionOrigin1S3OriginAccessControlBF48957F"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Distribution2 in aws-cdk-lib...",
+        "new AppStack (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\lib\\app-stack.ts:200:26)",
+        "<anonymous> (D:\\akshay\\flyhigh\\flyhigh2.0\\infra\\bin\\app.ts:29:1)",
+        "...node internals..."
+      ]
+    }
+  ]
+}

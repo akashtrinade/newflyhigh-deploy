@@ -1,0 +1,18 @@
+# ── Local Development Overrides ────────────────────
+# Copy this to application-local.yml (gitignored) and fill in your secrets.
+# Then run with: SPRING_PROFILES_ACTIVE=dev,local
+
+spring.data.mongodb.uri=mongodb+srv://<user>:<password>@cluster1.udkucyx.mongodb.net/flyhigh_dev?retryWrites=true&w=majority
+
+spring.mail.username=your-email@gmail.com
+spring.mail.password=your-app-password
+
+jwt.secret=your-strong-base64-encoded-secret-at-least-256-bits
+
+google.client-id=your-google-client-id.apps.googleusercontent.com
+google.client-secret=your-google-client-secret
+
+# ── Production secrets live in AWS Secrets Manager ──
+# flyhigh/{env}/credentials with keys:
+#   MONGODB_URI, JWT_SECRET, MAIL_USERNAME, MAIL_PASSWORD,
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET

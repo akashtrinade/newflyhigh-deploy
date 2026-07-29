@@ -1,0 +1,1142 @@
+{
+ "Resources": {
+  "BackendLambdaServiceRole98E4BC89": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/BackendLambda/ServiceRole/Resource"
+   }
+  },
+  "BackendLambdaServiceRoleDefaultPolicy922C20D8": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::ImportValue": "flyhigh-platform-staging:ExportsOutputRefCredentialsF8F243AABF433658"
+       }
+      },
+      {
+       "Action": "execute-api:ManageConnections",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:aws:execute-api:us-east-1:",
+          {
+           "Ref": "AWS::AccountId"
+          },
+          ":",
+          {
+           "Ref": "WebSocketApi34BCF99B"
+          },
+          "/staging/*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "BackendLambdaServiceRoleDefaultPolicy922C20D8",
+    "Roles": [
+     {
+      "Ref": "BackendLambdaServiceRole98E4BC89"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/BackendLambda/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "BackendLambdaD93C7B96": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+     },
+     "S3Key": "95c924c84f5d023be4edee540cb2cb401a49f115d01ed403b288f6cb412771df.jar"
+    },
+    "Environment": {
+     "Variables": {
+      "SPRING_PROFILES_ACTIVE": "prod",
+      "SECRET_ARN": {
+       "Fn::ImportValue": "flyhigh-platform-staging:ExportsOutputRefCredentialsF8F243AABF433658"
+      },
+      "CORS_ORIGINS": "*",
+      "LOG_LEVEL": "INFO"
+     }
+    },
+    "FunctionName": "flyhigh-backend-staging",
+    "Handler": "com.flyhigh.backend.StreamLambdaHandler::handleRequest",
+    "LoggingConfig": {
+     "LogGroup": "/aws/lambda/flyhigh-backend-staging"
+    },
+    "MemorySize": 1024,
+    "Role": {
+     "Fn::GetAtt": [
+      "BackendLambdaServiceRole98E4BC89",
+      "Arn"
+     ]
+    },
+    "Runtime": "java21",
+    "SnapStart": {
+     "ApplyOn": "PublishedVersions"
+    },
+    "Timeout": 29
+   },
+   "DependsOn": [
+    "BackendLambdaServiceRoleDefaultPolicy922C20D8",
+    "BackendLambdaServiceRole98E4BC89"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/BackendLambda/Resource",
+    "aws:asset:path": "asset.95c924c84f5d023be4edee540cb2cb401a49f115d01ed403b288f6cb412771df.jar",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
+   }
+  },
+  "SignalingLambdaServiceRole930CCA2B": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/SignalingLambda/ServiceRole/Resource"
+   }
+  },
+  "SignalingLambdaServiceRoleDefaultPolicy414B2637": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "flyhigh-platform-staging:ExportsOutputFnGetAttConnectionsTable8000B8A1Arn6FD6777C"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "flyhigh-platform-staging:ExportsOutputFnGetAttConnectionsTable8000B8A1Arn6FD6777C"
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "flyhigh-platform-staging:ExportsOutputFnGetAttConnectionsTable8000B8A1Arn6FD6777C"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "flyhigh-platform-staging:ExportsOutputFnGetAttConnectionsTable8000B8A1Arn6FD6777C"
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "flyhigh-platform-staging:ExportsOutputFnGetAttRoomsTableA5C1D45BArn3D85BB37"
+        }
+       ]
+      },
+      {
+       "Action": [
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "flyhigh-platform-staging:ExportsOutputFnGetAttRoomsTableA5C1D45BArn3D85BB37"
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "SignalingLambdaServiceRoleDefaultPolicy414B2637",
+    "Roles": [
+     {
+      "Ref": "SignalingLambdaServiceRole930CCA2B"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/SignalingLambda/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "SignalingLambdaFDA7557E": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+     },
+     "S3Key": "f9633285568c3ed09845d687b07d4593244e09196e1aa616b312c33a7afea2af.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "CONNECTIONS_TABLE": {
+       "Fn::ImportValue": "flyhigh-platform-staging:ExportsOutputRefConnectionsTable8000B8A13717867F"
+      },
+      "ROOMS_TABLE": {
+       "Fn::ImportValue": "flyhigh-platform-staging:ExportsOutputRefRoomsTableA5C1D45BCB51EC57"
+      }
+     }
+    },
+    "FunctionName": "flyhigh-signaling-staging",
+    "Handler": "lambda.handler",
+    "LoggingConfig": {
+     "LogGroup": "/aws/lambda/flyhigh-signaling-staging"
+    },
+    "MemorySize": 256,
+    "Role": {
+     "Fn::GetAtt": [
+      "SignalingLambdaServiceRole930CCA2B",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Timeout": 29
+   },
+   "DependsOn": [
+    "SignalingLambdaServiceRoleDefaultPolicy414B2637",
+    "SignalingLambdaServiceRole930CCA2B"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/SignalingLambda/Resource",
+    "aws:asset:path": "asset.f9633285568c3ed09845d687b07d4593244e09196e1aa616b312c33a7afea2af",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
+   }
+  },
+  "HttpApiF5A9A8A7": {
+   "Type": "AWS::ApiGatewayV2::Api",
+   "Properties": {
+    "CorsConfiguration": {
+     "AllowCredentials": false,
+     "AllowHeaders": [
+      "Content-Type",
+      "Authorization"
+     ],
+     "AllowMethods": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE",
+      "OPTIONS"
+     ],
+     "AllowOrigins": [
+      "*"
+     ]
+    },
+    "Name": "flyhigh-http-staging",
+    "ProtocolType": "HTTP"
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/HttpApi/Resource"
+   }
+  },
+  "HttpApiDefaultStage3EEB07D6": {
+   "Type": "AWS::ApiGatewayV2::Stage",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "AutoDeploy": true,
+    "StageName": "$default"
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/HttpApi/DefaultStage/Resource"
+   }
+  },
+  "HttpApiANYapiproxyBackendIntegration60EA3C2B": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::GetAtt": [
+      "BackendLambdaD93C7B96",
+      "Arn"
+     ]
+    },
+    "PayloadFormatVersion": "2.0"
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/HttpApi/ANY--api--{proxy+}/BackendIntegration/Resource"
+   }
+  },
+  "HttpApiANYapiproxyBackendIntegrationPermission797D0BA4": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "BackendLambdaD93C7B96",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "HttpApiF5A9A8A7"
+       },
+       "/*/*/api/{proxy+}"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/HttpApi/ANY--api--{proxy+}/BackendIntegration-Permission"
+   }
+  },
+  "HttpApiANYapiproxy20978A2B": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "HttpApiF5A9A8A7"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "ANY /api/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "HttpApiANYapiproxyBackendIntegration60EA3C2B"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/HttpApi/ANY--api--{proxy+}/Resource"
+   }
+  },
+  "WebSocketApi34BCF99B": {
+   "Type": "AWS::ApiGatewayV2::Api",
+   "Properties": {
+    "Name": "flyhigh-ws-staging",
+    "ProtocolType": "WEBSOCKET",
+    "RouteSelectionExpression": "$request.body.action"
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/WebSocketApi/Resource"
+   }
+  },
+  "WebSocketApiconnectRouteConnectIntegrationPermission39398969": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "SignalingLambdaFDA7557E",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "WebSocketApi34BCF99B"
+       },
+       "/*$connect"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/WebSocketApi/$connect-Route/ConnectIntegration-Permission"
+   }
+  },
+  "WebSocketApiconnectRouteConnectIntegration7F1E0FDE": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WebSocketApi34BCF99B"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+       {
+        "Fn::GetAtt": [
+         "SignalingLambdaFDA7557E",
+         "Arn"
+        ]
+       },
+       "/invocations"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/WebSocketApi/$connect-Route/ConnectIntegration/Resource"
+   }
+  },
+  "WebSocketApiconnectRoute846149DD": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WebSocketApi34BCF99B"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "$connect",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "WebSocketApiconnectRouteConnectIntegration7F1E0FDE"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/WebSocketApi/$connect-Route/Resource"
+   }
+  },
+  "WebSocketApidisconnectRouteDisconnectIntegrationPermissionAE705904": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "SignalingLambdaFDA7557E",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "WebSocketApi34BCF99B"
+       },
+       "/*$disconnect"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/WebSocketApi/$disconnect-Route/DisconnectIntegration-Permission"
+   }
+  },
+  "WebSocketApidisconnectRouteDisconnectIntegration94C91381": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WebSocketApi34BCF99B"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+       {
+        "Fn::GetAtt": [
+         "SignalingLambdaFDA7557E",
+         "Arn"
+        ]
+       },
+       "/invocations"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/WebSocketApi/$disconnect-Route/DisconnectIntegration/Resource"
+   }
+  },
+  "WebSocketApidisconnectRouteC181A19C": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WebSocketApi34BCF99B"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "$disconnect",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "WebSocketApidisconnectRouteDisconnectIntegration94C91381"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/WebSocketApi/$disconnect-Route/Resource"
+   }
+  },
+  "WebSocketApidefaultRouteDefaultIntegrationPermission0418F15D": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "SignalingLambdaFDA7557E",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "WebSocketApi34BCF99B"
+       },
+       "/*$default"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/WebSocketApi/$default-Route/DefaultIntegration-Permission"
+   }
+  },
+  "WebSocketApidefaultRouteDefaultIntegration0865A209": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WebSocketApi34BCF99B"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+       {
+        "Fn::GetAtt": [
+         "SignalingLambdaFDA7557E",
+         "Arn"
+        ]
+       },
+       "/invocations"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/WebSocketApi/$default-Route/DefaultIntegration/Resource"
+   }
+  },
+  "WebSocketApidefaultRoute05EFD2FA": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WebSocketApi34BCF99B"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "$default",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "WebSocketApidefaultRouteDefaultIntegration0865A209"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/WebSocketApi/$default-Route/Resource"
+   }
+  },
+  "WebSocketStageC46B7E43": {
+   "Type": "AWS::ApiGatewayV2::Stage",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WebSocketApi34BCF99B"
+    },
+    "AutoDeploy": true,
+    "StageName": "staging"
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/WebSocketStage/Resource"
+   }
+  },
+  "SpaBucket48E1059F": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketName": "flyhigh-staging-spa",
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "Tags": [
+     {
+      "Key": "aws-cdk:auto-delete-objects",
+      "Value": "true"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/SpaBucket/Resource"
+   }
+  },
+  "SpaBucketPolicy77D96634": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "SpaBucket48E1059F"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:PutBucketPolicy",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*"
+       ],
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": {
+         "Fn::GetAtt": [
+          "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+          "Arn"
+         ]
+        }
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "SpaBucket48E1059F",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "SpaBucket48E1059F",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "s3:GetObject",
+       "Condition": {
+        "StringEquals": {
+         "AWS:SourceArn": {
+          "Fn::Join": [
+           "",
+           [
+            "arn:",
+            {
+             "Ref": "AWS::Partition"
+            },
+            ":cloudfront::",
+            {
+             "Ref": "AWS::AccountId"
+            },
+            ":distribution/",
+            {
+             "Ref": "SpaDistributionD69C39B0"
+            }
+           ]
+          ]
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "cloudfront.amazonaws.com"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "SpaBucket48E1059F",
+            "Arn"
+           ]
+          },
+          "/*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/SpaBucket/Policy/Resource"
+   }
+  },
+  "SpaBucketAutoDeleteObjectsCustomResourceDCF3398A": {
+   "Type": "Custom::S3AutoDeleteObjects",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F",
+      "Arn"
+     ]
+    },
+    "BucketName": {
+     "Ref": "SpaBucket48E1059F"
+    }
+   },
+   "DependsOn": [
+    "SpaBucketPolicy77D96634"
+   ],
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/SpaBucket/AutoDeleteObjectsCustomResource/Default"
+   }
+  },
+  "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ]
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/Custom::S3AutoDeleteObjectsCustomResourceProvider/Role"
+   }
+  },
+  "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+     },
+     "S3Key": "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6.zip"
+    },
+    "Timeout": 900,
+    "MemorySize": 128,
+    "Handler": "index.handler",
+    "Role": {
+     "Fn::GetAtt": [
+      "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs24.x",
+    "Description": {
+     "Fn::Join": [
+      "",
+      [
+       "Lambda function for auto-deleting objects in ",
+       {
+        "Ref": "SpaBucket48E1059F"
+       },
+       " S3 bucket."
+      ]
+     ]
+    }
+   },
+   "DependsOn": [
+    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/Custom::S3AutoDeleteObjectsCustomResourceProvider/Handler",
+    "aws:asset:path": "asset.faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6",
+    "aws:asset:property": "Code"
+   }
+  },
+  "SpaDistributionOrigin1S3OriginAccessControlBF48957F": {
+   "Type": "AWS::CloudFront::OriginAccessControl",
+   "Properties": {
+    "OriginAccessControlConfig": {
+     "Name": "flyhighappstagingSpaDistribuOrigin1S3OriginAccessControl84231453",
+     "OriginAccessControlOriginType": "s3",
+     "SigningBehavior": "always",
+     "SigningProtocol": "sigv4"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/SpaDistribution/Origin1/S3OriginAccessControl/Resource"
+   }
+  },
+  "SpaDistributionD69C39B0": {
+   "Type": "AWS::CloudFront::Distribution",
+   "Properties": {
+    "DistributionConfig": {
+     "CustomErrorResponses": [
+      {
+       "ErrorCachingMinTTL": 10,
+       "ErrorCode": 404,
+       "ResponseCode": 200,
+       "ResponsePagePath": "/index.html"
+      },
+      {
+       "ErrorCachingMinTTL": 10,
+       "ErrorCode": 403,
+       "ResponseCode": 200,
+       "ResponsePagePath": "/index.html"
+      }
+     ],
+     "DefaultCacheBehavior": {
+      "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+      "Compress": true,
+      "TargetOriginId": "flyhighappstagingSpaDistributionOrigin134C5483B",
+      "ViewerProtocolPolicy": "redirect-to-https"
+     },
+     "DefaultRootObject": "index.html",
+     "Enabled": true,
+     "HttpVersion": "http2",
+     "IPV6Enabled": true,
+     "Origins": [
+      {
+       "DomainName": {
+        "Fn::GetAtt": [
+         "SpaBucket48E1059F",
+         "RegionalDomainName"
+        ]
+       },
+       "Id": "flyhighappstagingSpaDistributionOrigin134C5483B",
+       "OriginAccessControlId": {
+        "Fn::GetAtt": [
+         "SpaDistributionOrigin1S3OriginAccessControlBF48957F",
+         "Id"
+        ]
+       },
+       "S3OriginConfig": {
+        "OriginAccessIdentity": ""
+       }
+      }
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/SpaDistribution/Resource"
+   }
+  },
+  "Backend5xxAlarm3FBA78D9": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "flyhigh backend 5xx errors > 5 in 5 minutes",
+    "AlarmName": "flyhigh-backend-5xx-staging",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "Dimensions": [
+     {
+      "Name": "FunctionName",
+      "Value": {
+       "Ref": "BackendLambdaD93C7B96"
+      }
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "Errors",
+    "Namespace": "AWS/Lambda",
+    "Period": 300,
+    "Statistic": "Sum",
+    "Threshold": 5
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/Backend5xxAlarm/Resource"
+   }
+  },
+  "Signaling5xxAlarm3BF6D462": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "flyhigh signaling errors > 5 in 5 minutes",
+    "AlarmName": "flyhigh-signaling-5xx-staging",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "Dimensions": [
+     {
+      "Name": "FunctionName",
+      "Value": {
+       "Ref": "SignalingLambdaFDA7557E"
+      }
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "Errors",
+    "Namespace": "AWS/Lambda",
+    "Period": 300,
+    "Statistic": "Sum",
+    "Threshold": 5
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/Signaling5xxAlarm/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/5VSwU7DMAz9lu2cBdgQB27dEIIT03rggNCUpl7x1iZV7GxMUf8dJR1bQeLAyc/2s/3sZCqndzfyeqQONNHlblJjIUPOSu/ECsh6p0GoA61DrZqiVDI8eqMZrRGLjRniJbgGidCaTqBqZFjZGmIi2aWtUR8TL6FO0GytiIBJZtEImskw93oHPFcEooexoEdvYdzgJ5rx/XgoNUqjmUwpkj0182wfoAaGl2ILmmncvZ/6XWQM/X/07gtyVgwNmNS6E6rFSjEc1HE/leGJuc1ajEOiiW7Oqkq36EEMraznHj0bhsqp7zv+cnveKxS5Tbu1eHF+5YaV52Ca2AldW19unDUswwMSOyx8IuazF4cVmkxrIFpYw87WcfAf4WHxqe1Bsf6QIauVa9LWEXSdSO8a56OpxMIT2+b8peJmZ/wjtXR2jyW49AuiDs+t504YW4Lc0tV+eidv5fVoS4gT5w1jA3LV2y/xWw+dzQIAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "flyhigh-app-staging/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "SpaBucketName": {
+   "Value": {
+    "Ref": "SpaBucket48E1059F"
+   }
+  },
+  "CloudFrontDistributionId": {
+   "Value": {
+    "Ref": "SpaDistributionD69C39B0"
+   }
+  },
+  "HttpApiUrl": {
+   "Value": {
+    "Fn::GetAtt": [
+     "HttpApiF5A9A8A7",
+     "ApiEndpoint"
+    ]
+   }
+  },
+  "WsApiUrl": {
+   "Value": {
+    "Fn::GetAtt": [
+     "WebSocketApi34BCF99B",
+     "ApiEndpoint"
+    ]
+   }
+  },
+  "CloudFrontDomain": {
+   "Value": {
+    "Fn::GetAtt": [
+     "SpaDistributionD69C39B0",
+     "DomainName"
+    ]
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}
