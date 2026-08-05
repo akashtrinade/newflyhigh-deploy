@@ -172,7 +172,7 @@ public class SecurityConfig {
             // In dev, log warning and replace with default localhost origins
             System.err.println("[SECURITY WARNING] CORS origin '*' detected. "
                     + "Using default localhost origins for dev safety.");
-            origins = List.of("http://localhost:5173", "http://localhost:3000","https://newflyhigh-deploy-am5u-wwfzj1agx.vercel.app");
+            origins = List.of("http://localhost:5173", "http://localhost:3000","https://newflyhigh-deploy-am5u.vercel.app");
         }
 
         CorsConfiguration config = new CorsConfiguration();
