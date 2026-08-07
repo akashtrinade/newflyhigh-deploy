@@ -169,11 +169,11 @@ public class GoogleAuthController {
     private void setAuthCookies(HttpServletResponse response, String accessToken, String refreshToken) {
         String securePart = cookieSecure ? "; Secure" : "";
         String accessCookie = String.format(
-                "accessToken=%s; HttpOnly%s; Path=/; Max-Age=%d; SameSite=Strict",
+                "accessToken=%s; HttpOnly%s; Path=/; Max-Age=%d; SameSite=None",
                 accessToken, securePart, (int) (jwtService.getAccessTokenExpiration() / 1000));
 
         String refreshCookie = String.format(
-                "refreshToken=%s; HttpOnly%s; Path=/; Max-Age=%d; SameSite=Strict",
+                "refreshToken=%s; HttpOnly%s; Path=/; Max-Age=%d; SameSite=None",
                 refreshToken, securePart, (int) (jwtService.getRefreshTokenExpiration() / 1000));
 
         response.addHeader("Set-Cookie", accessCookie);
