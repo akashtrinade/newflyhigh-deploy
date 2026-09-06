@@ -33,10 +33,13 @@ export const ExpertSearchPageSchema = z.object({
 })
 
 export const ExpertReviewSchema = z.object({
+  callRequestId: z.string().nullable().optional(),
   clientName: z.string().nullable().optional(),
   rating: z.number().int().min(1).max(5),
   review: z.string().nullable().optional(),
   createdAt: z.string().nullable().optional(),
+  expertResponse: z.string().nullable().optional(),
+  expertRespondedAt: z.string().nullable().optional(),
 })
 
 export const ExpertPublicProfileSchema = z.object({
@@ -116,6 +119,7 @@ export const ExpertEarningSchema = z.object({
   platformFee: z.number().nullable().optional(),
   expertEarning: z.number().nullable().optional(),
   status: z.string(),
+  payoutStatus: z.string().nullable().optional(),
 })
 
 export const EarningsPageSchema = z.object({
@@ -145,4 +149,8 @@ export const CallHistoryItemSchema = z.object({
   reviewSubmitted: z.boolean().nullable().optional(),
   feedbackPending: z.boolean().nullable().optional(),
   interactionId: z.string().nullable().optional(),
+  totalPaidAmount: z.number().nullable().optional(),
+  expertAmount: z.number().nullable().optional(),
+  paymentStatus: z.string().nullable().optional(),
+  durationMinutes: z.number().int().nullable().optional(),
 })

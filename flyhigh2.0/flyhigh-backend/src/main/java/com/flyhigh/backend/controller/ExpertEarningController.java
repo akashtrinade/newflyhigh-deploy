@@ -59,7 +59,7 @@ public class ExpertEarningController {
             log.error("Error fetching earnings summary: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "success", false,
-                    "message", "Failed to fetch earnings summary: " + e.getMessage()
+                    "message", "Failed to fetch earnings summary"
             ));
         }
     }
@@ -97,7 +97,7 @@ public class ExpertEarningController {
             log.error("Error fetching earnings history: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "success", false,
-                    "message", "Failed to fetch earnings history: " + e.getMessage()
+                    "message", "Failed to fetch earnings history"
             ));
         }
     }
@@ -113,12 +113,8 @@ public class ExpertEarningController {
             User user = authService.getUserByEmail(authentication.getName());
             validateExpert(user);
 
-            ExpertEarningResponse earning = expertEarningService.getEarningById(earningId);
-
-            // The service returns the earning, but we must verify ownership
-            // We'll validate by checking the expertId from the original entity
-            // Since getEarningById returns a DTO without expertId, we trust
-            // the service layer for now; Phase 4 can add explicit ownership check
+            ExpertEarningResponse earning =
+                    expertEarningService.getEarningByIdForExpert(earningId, user.getId());
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
@@ -138,7 +134,7 @@ public class ExpertEarningController {
             log.error("Error fetching earning {}: {}", earningId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "success", false,
-                    "message", "Failed to fetch earning: " + e.getMessage()
+                    "message", "Failed to fetch earning"
             ));
         }
     }
@@ -153,9 +149,10 @@ public class ExpertEarningController {
     }
 
     /**
-     * DEV: Manually triggers retroactive earnings processing for all completed paid sessions.
-     * Call this if you have past completed sessions that need earnings records created.
+     * Manually triggers retroactive earnings processing for all completed paid sessions.
+     * Admin-only (runs on startup automatically; exposed for operational use).
      */
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/migrate")
     public ResponseEntity<Map<String, Object>> runMigration() {
         try {
@@ -168,7 +165,7 @@ public class ExpertEarningController {
             log.error("Migration failed: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "success", false,
-                    "message", "Migration failed: " + e.getMessage()
+                    "message", "Migration failed"
             ));
         }
     }

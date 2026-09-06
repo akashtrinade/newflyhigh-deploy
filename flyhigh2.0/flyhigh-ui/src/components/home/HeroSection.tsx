@@ -1,14 +1,79 @@
 import { ArrowRight, Check, Star } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 import { Avatar, AvatarFallback, AvatarGroup } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/contexts/AuthContext"
+
+import type { FeaturedExpert } from "@/types/public-stats"
 
 import { HeroVisual } from "./HeroVisual"
 
 const socialAvatars = ["AK", "RS", "PM", "DV", "SK"]
 
-export function HeroSection() {
+interface HeroSectionProps {
+  totalUsers?: number | null
+  averageRating?: number | null
+  featuredExperts?: FeaturedExpert[] | null
+  verifiedExperts?: number | null
+}
+
+function formatUserCount(n: number): string {
+  if (n >= 1000) {
+    const k = Math.floor(n / 100) / 10
+    return `${k.toFixed(k % 1 === 0 ? 0 : 1)}K+`
+  }
+  return `${n.toLocaleString("en-IN")}+`
+}
+
+export function HeroSection({
+  totalUsers,
+  averageRating,
+  featuredExperts,
+  verifiedExperts,
+}: HeroSectionProps) {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+
+  const userCountDisplay = totalUsers ? formatUserCount(totalUsers) : "10,000+"
+  const ratingDisplay = averageRating ? averageRating.toFixed(1) : "4.9"
+
+  // Pick the first featured expert as the hero card subject
+  const heroExpert = featuredExperts?.[0] ?? null
+
+  // Build live expert avatars from remaining featured experts (or first 3)
+  const heroLiveExperts =
+    featuredExperts && featuredExperts.length > 0
+      ? featuredExperts.slice(0, 3).map((e) => ({
+          initials: e.initials,
+          name: e.name.split(" ")[0],
+          role: e.category,
+          color: "from-indigo-500 to-violet-600",
+        }))
+      : null
+
+  // Online count: use featured experts that are online, or verifiedExperts
+  const onlineCount =
+    featuredExperts && featuredExperts.length > 0
+      ? featuredExperts.filter((e) => e.isOnline).length
+      : null
+
+  const handleFindExpert = () => {
+    if (user) {
+      navigate("/search-experts")
+    } else {
+      navigate("/login")
+    }
+  }
+
+  const handleBecomeExpert = () => {
+    if (user) {
+      navigate("/expert/profile")
+    } else {
+      navigate("/signup?role=expert")
+    }
+  }
   return (
     <section
       id="home"
@@ -29,7 +94,7 @@ export function HeroSection() {
             className="hero-reveal hero-reveal-delay-1 mb-6 h-7 gap-1.5 border-indigo-200 bg-indigo-50 px-3 font-medium text-[var(--flyhigh-primary)]"
           >
             <Star className="size-3 fill-[var(--flyhigh-accent)] text-[var(--flyhigh-accent)]" />
-            Trusted by 10,000+ users across India
+            Trusted by {userCountDisplay} users across India
           </Badge>
 
           <h1 className="font-heading text-4xl leading-[1.08] font-bold tracking-tight text-[var(--flyhigh-text)] sm:text-5xl md:text-[3.25rem] lg:text-[3.75rem]">
@@ -49,6 +114,7 @@ export function HeroSection() {
           <div className="hero-reveal hero-reveal-delay-5 mt-8 flex flex-wrap gap-3">
             <Button
               size="lg"
+              onClick={handleFindExpert}
               className="h-12 gap-2 bg-[var(--flyhigh-primary)] px-7 text-base shadow-lg shadow-indigo-500/25 hover:bg-[var(--flyhigh-primary-hover)]"
             >
               Find an Expert
@@ -57,6 +123,7 @@ export function HeroSection() {
             <Button
               size="lg"
               variant="outline"
+              onClick={handleBecomeExpert}
               className="h-12 border-slate-300 px-7 text-base text-slate-700 hover:bg-slate-50"
             >
               Become an Expert
@@ -92,20 +159,24 @@ export function HeroSection() {
             </AvatarGroup>
             <div className="text-sm">
               <p className="font-semibold text-[var(--flyhigh-text)]">
-                Join 10,000+ professionals already on FlyHigh
+                Join {userCountDisplay} professionals already on FlyHigh
               </p>
               <div className="mt-0.5 flex items-center gap-1 text-muted-fh">
                 <Star
                   className="size-3.5 fill-[var(--flyhigh-accent)] text-[var(--flyhigh-accent)]"
                   aria-hidden="true"
                 />
-                4.9/5 average rating
+                {ratingDisplay}/5 average rating
               </div>
             </div>
           </div>
         </div>
 
-        <HeroVisual />
+        <HeroVisual
+          heroExpert={heroExpert}
+          liveExperts={heroLiveExperts}
+          onlineCount={onlineCount}
+        />
       </div>
     </section>
   )

@@ -1,20 +1,23 @@
 import {
   Briefcase,
+  CheckCircle,
+  Edit3,
   GraduationCap,
   Heart,
   Landmark,
   Laptop,
   Scale,
+  Sparkles,
   Stethoscope,
   TrendingUp,
+  UserPlus,
+  Video,
   type LucideIcon,
 } from "lucide-react"
 
 export const navLinks = [
   { label: "Home", href: "/" },
-  { label: "Find Experts", href: "#experts" },
   { label: "How It Works", href: "/how-it-works" },
-  { label: "Pricing", href: "/pricing" },
   { label: "About Us", href: "/about" },
   { label: "Contact", href: "/contact" },
 ] as const
@@ -44,21 +47,38 @@ export const trustedCompanies = [
 export const howItWorksSteps = [
   {
     step: 1,
-    title: "Find Expert",
+    icon: UserPlus,
+    title: "Register",
     description:
-      "Browse verified experts by category, rating, and availability.",
+      "Register FlyHigh as a Customer to unlock access to our trusted network.",
   },
   {
     step: 2,
-    title: "Book Consultation",
+    icon: Edit3,
+    title: "Describe",
     description:
-      "Choose a time slot and pay securely — no subscription required.",
+      "Tell us what you need in a few lines. No forms, no friction — just your situation.",
   },
   {
     step: 3,
-    title: "Video Call & Resolution",
+    icon: Sparkles,
+    title: "Match",
     description:
-      "Connect via HD video, get expert advice, and resolve your issue.",
+      "Our system matches you with a verified expert in the relevant field. Credentials checked, quality assured.",
+  },
+  {
+    step: 4,
+    icon: Video,
+    title: "Connect",
+    description:
+      "Start a session — chat, voice, or video. Whatever feels right for the conversation.",
+  },
+  {
+    step: 5,
+    icon: CheckCircle,
+    title: "Act",
+    description:
+      "Walk away with clear next steps you can act on immediately. Rate and improve future matches.",
   },
 ] as const
 
@@ -170,7 +190,7 @@ export const testimonials = [
 ] as const
 
 export const footerLinks = {
-  Platform: ["Find Experts", "Become an Expert", "Pricing", "Categories"],
+  Platform: ["Find Experts", "Become an Expert", "Categories"],
   Support: ["Help Center", "Contact Us", "FAQs", "Dispute Resolution"],
   Resources: ["Blog", "Expert Guides", "Success Stories", "API Docs"],
   Company: ["About Us", "Careers", "Press", "Privacy Policy"],

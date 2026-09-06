@@ -40,6 +40,19 @@ public class ExpertProfile {
     private String portfolio;
     private String github;
 
+    // Payout details (expert withdrawal)
+    private String payoutAccountHolderName;
+    private String payoutAccountNumber;
+    private String payoutIfsc;
+    private String payoutUpiId;
+
+    // ── RazorpayX gateway linkage + bank verification state ──
+    private String payoutContactId;        // RazorpayX contact id (cont_...)
+    private String payoutFundAccountId;    // RazorpayX fund account id (fa_...)
+    private String payoutValidationId;     // RazorpayX composite validation txn id
+    private String payoutVerificationStatus; // null | PENDING | VERIFIED | FAILED
+    private String payoutVerificationNote;   // registered name / failure details
+
     private Boolean isOnline = false;
     private Boolean isApproved = false;
 
@@ -177,6 +190,78 @@ public class ExpertProfile {
 
     public void setGithub(String github) {
         this.github = github;
+    }
+
+    public String getPayoutAccountHolderName() {
+        return payoutAccountHolderName;
+    }
+
+    public void setPayoutAccountHolderName(String payoutAccountHolderName) {
+        this.payoutAccountHolderName = payoutAccountHolderName;
+    }
+
+    public String getPayoutAccountNumber() {
+        return payoutAccountNumber;
+    }
+
+    public void setPayoutAccountNumber(String payoutAccountNumber) {
+        this.payoutAccountNumber = payoutAccountNumber;
+    }
+
+    public String getPayoutIfsc() {
+        return payoutIfsc;
+    }
+
+    public void setPayoutIfsc(String payoutIfsc) {
+        this.payoutIfsc = payoutIfsc;
+    }
+
+    public String getPayoutUpiId() {
+        return payoutUpiId;
+    }
+
+    public void setPayoutUpiId(String payoutUpiId) {
+        this.payoutUpiId = payoutUpiId;
+    }
+
+    public String getPayoutContactId() {
+        return payoutContactId;
+    }
+
+    public void setPayoutContactId(String payoutContactId) {
+        this.payoutContactId = payoutContactId;
+    }
+
+    public String getPayoutFundAccountId() {
+        return payoutFundAccountId;
+    }
+
+    public void setPayoutFundAccountId(String payoutFundAccountId) {
+        this.payoutFundAccountId = payoutFundAccountId;
+    }
+
+    public String getPayoutValidationId() {
+        return payoutValidationId;
+    }
+
+    public void setPayoutValidationId(String payoutValidationId) {
+        this.payoutValidationId = payoutValidationId;
+    }
+
+    public String getPayoutVerificationStatus() {
+        return payoutVerificationStatus;
+    }
+
+    public void setPayoutVerificationStatus(String payoutVerificationStatus) {
+        this.payoutVerificationStatus = payoutVerificationStatus;
+    }
+
+    public String getPayoutVerificationNote() {
+        return payoutVerificationNote;
+    }
+
+    public void setPayoutVerificationNote(String payoutVerificationNote) {
+        this.payoutVerificationNote = payoutVerificationNote;
     }
 
     public Boolean getIsOnline() {

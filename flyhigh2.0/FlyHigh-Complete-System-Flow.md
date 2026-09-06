@@ -1,5 +1,15 @@
 # FlyHigh 2.0 — Complete System Flow Documentation
 
+## Recent Updates (Aug 17, 2026)
+
+- Payments: verify accepts FREE_SESSION_EXPIRED / completed-unpaid sessions; webhook applies EXTENSION orders; extension verify atomic + idempotent; paid time tracked cumulatively (`scheduledDurationMinutes`) and bound to the paid order.
+- Authorization: all session/payment endpoints enforce ownership (client/expert/participant), returning 403 on violation.
+- Notifications: backend `NotificationService` writes in-app notifications for call requests, responses, and payment confirmations.
+- UI: 401 token refresh mid-call; extension "Retry Verification"; Leave Feedback passes interactionId (paid status resolved server-side); socket reconnect re-joins call room; peer-disconnect banner; Terms & Privacy pages (`/terms`, `/privacy`).
+- Admin: fail-fast credential config (no defaults); list endpoints return page-shaped `{content, totalPages, totalElements, page}`.
+- Search: price filter on ₹ labels; rating filter on `averageRating`.
+- Refunds require a COMPLETED session.
+
 ## Architecture Overview
 
 ```

@@ -80,6 +80,7 @@ async function addConnection(connectionId, userData) {
       role: userData.role,
       userId: userData.userId || null,
       expertId: userData.expertId || null,
+      authenticated: true,
       connectedAt: Math.floor(Date.now() / 1000),
       activeRoomId: null,
       ttl,
@@ -151,6 +152,19 @@ async function deleteRoom(roomId) {
   }));
 }
 
+// Soft-delete: mark the room for cleanup in ROOM_END_GRACE_SECONDS instead of
+// deleting immediately, so late-arriving disconnect/leave events don't race.
+async function softDeleteRoom(roomId) {
+  await docClient.send(new UpdateCommand({
+    TableName: ROOMS_TABLE,
+    Key: { roomId },
+    UpdateExpression: 'SET ttl = :ttl',
+    ExpressionAttributeValues: {
+      ':ttl': Math.floor(Date.now() / 1000) + 5 * 60, // 5 minute grace period
+    },
+  }));
+}
+
 async function broadcastToRoom(endpoint, roomId, data, excludeConnectionId = null) {
   const room = await getRoom(roomId);
   if (!room || !room.connectionIds) return;
@@ -159,6 +173,14 @@ async function broadcastToRoom(endpoint, roomId, data, excludeConnectionId = nul
   await Promise.allSettled(
     targets.map(cid => postToConnection(endpoint, cid, data))
   );
+}
+
+function isRoomMember(conn, roomName) {
+  return Boolean(conn && conn.activeRoomId && conn.activeRoomId === roomName);
+}
+
+function roleIs(conn, expected) {
+  return Boolean(conn && conn.role && conn.role.toUpperCase() === expected);
 }
 
 // ── Route handlers ───────────────────────────────────────────
@@ -327,6 +349,11 @@ async function handleDefault(event) {
 
     // ── Call request notification ──────────────────────
     case 'call-request': {
+      if (!roleIs(conn, 'CLIENT')) {
+        console.warn(`[SECURITY] Rejected call-request: sender is not a CLIENT (${conn?.email})`);
+        return { statusCode: 403, body: 'Forbidden: Only clients can place calls' };
+      }
+
       const { expertEmail, expertId, callRequestId, clientName, clientId } = data;
 
       // Look up expert by expertId first, then by email
@@ -354,6 +381,11 @@ async function handleDefault(event) {
 
     // ── Call response (accept/reject) ──────────────────
     case 'call-response': {
+      if (!roleIs(conn, 'EXPERT')) {
+        console.warn(`[SECURITY] Rejected call-response: sender is not an EXPERT (${conn?.email})`);
+        return { statusCode: 403, body: 'Forbidden: Only experts can respond to calls' };
+      }
+
       const { clientEmail, callRequestId, callAction, roomId, rejectReason } = data;
 
       if (clientEmail) {
@@ -376,6 +408,14 @@ async function handleDefault(event) {
     // ── Call ended notification ────────────────────────
     case 'notify-call-ended': {
       const { clientEmail, expertEmail } = data;
+
+      // Sender must be one of the participants of the ended call
+      const isParticipant = (clientEmail && conn.email === clientEmail)
+        || (expertEmail && conn.email === expertEmail);
+      if (!isParticipant) {
+        console.warn(`[SECURITY] Rejected notify-call-ended: sender ${conn?.email} is not a participant`);
+        return { statusCode: 403, body: 'Forbidden: Not a call participant' };
+      }
 
       if (clientEmail) {
         const clientConns = await getConnectionsByField('email', clientEmail);
@@ -401,6 +441,12 @@ async function handleDefault(event) {
       const { roomId, userEmail, role } = data;
       if (!roomId) break;
 
+      // The claimed identity must match the JWT-verified connection email
+      if (userEmail && conn.email !== userEmail) {
+        console.warn(`[SECURITY] Rejected join-room: email mismatch (connection=${conn.email}, claimed=${userEmail})`);
+        return { statusCode: 403, body: 'Forbidden: Identity mismatch' };
+      }
+
       // Create room if it doesn't exist
       const existingRoom = await getRoom(roomId);
       if (!existingRoom) {
@@ -410,7 +456,7 @@ async function handleDefault(event) {
       }
 
       await updateConnectionRoom(connectionId, roomId);
-      console.log(`${userEmail || connectionId} (${role}) joined room ${roomId}`);
+      console.log(`${userEmail || conn.email || connectionId} (${role || conn.role}) joined room ${roomId}`);
       break;
     }
 
@@ -420,6 +466,10 @@ async function handleDefault(event) {
     case 'ice-candidate': {
       const { roomName } = data;
       if (!roomName) break;
+      if (!isRoomMember(conn, roomName)) {
+        console.warn(`[SECURITY] Rejected ${action}: ${conn?.email} not a member of room ${roomName}`);
+        return { statusCode: 403, body: 'Forbidden: Not a room member' };
+      }
       await broadcastToRoom(endpoint, roomName, body, connectionId);
       break;
     }
@@ -428,9 +478,19 @@ async function handleDefault(event) {
     case 'send-chat-message': {
       const { roomName } = data;
       if (!roomName) break;
+      if (!isRoomMember(conn, roomName)) {
+        console.warn(`[SECURITY] Rejected send-chat-message: ${conn?.email} not a member of room ${roomName}`);
+        return { statusCode: 403, body: 'Forbidden: Not a room member' };
+      }
+      const message = data.message;
+      const safeMessage = {
+        ...(typeof message === 'object' && message !== null ? message : {}),
+        text: typeof message?.text === 'string' ? message.text.slice(0, 5000) : String(message ?? ''),
+        isMine: false,
+      };
       await broadcastToRoom(endpoint, roomName, {
         action: 'chat-message',
-        message: data.message,
+        message: safeMessage,
       }, connectionId);
       break;
     }
@@ -439,6 +499,10 @@ async function handleDefault(event) {
     case 'session-extended': {
       const { roomName, newExpiry, extendedBy } = data;
       if (!roomName) break;
+      if (!isRoomMember(conn, roomName)) {
+        console.warn(`[SECURITY] Rejected session-extended: ${conn?.email} not a member of room ${roomName}`);
+        return { statusCode: 403, body: 'Forbidden: Not a room member' };
+      }
       await broadcastToRoom(endpoint, roomName, {
         action: 'session-extended',
         newExpiry,
@@ -451,13 +515,17 @@ async function handleDefault(event) {
     case 'end-call': {
       const { roomName } = data;
       if (!roomName) break;
+      if (!isRoomMember(conn, roomName)) {
+        console.warn(`[SECURITY] Rejected end-call: ${conn?.email} not a member of room ${roomName}`);
+        return { statusCode: 403, body: 'Forbidden: Not a room member' };
+      }
       await broadcastToRoom(endpoint, roomName, {
         action: 'call-ended',
       }, connectionId);
 
-      // Clean up room
+      // Soft-cleanup: keep the room briefly for in-flight disconnect/leave events
       if (roomName) {
-        await deleteRoom(roomName);
+        await softDeleteRoom(roomName);
       }
       break;
     }

@@ -224,7 +224,11 @@ public class DevDataSeeder {
         // 6. Ensure every seeded expert has an ExpertProfile
         ensureExpertProfiles();
 
-        // 7. Fill review gaps
+        // 7. Refresh heartbeats for seeded experts flagged online so the
+        // "Online Experts" sections stay populated across backend restarts
+        refreshSeedExpertPresence();
+
+        // 8. Fill review gaps
         if (reviewsNeeded > 0 && !seedClientIds.isEmpty() && !seedExpertIds.isEmpty()) {
             log.info("Gap: {} more reviews needed (have {}, target {}).",
                     reviewsNeeded, existingReviews, TARGET_REVIEWS);
@@ -243,6 +247,27 @@ public class DevDataSeeder {
         log.info("=== DEV DATA SEEDER COMPLETE ===");
         log.info("Final counts: {} clients, {} experts, {} reviews",
                 finalClients, finalExperts, finalReviews);
+    }
+
+    /**
+     * Refreshes the heartbeat (lastActivityAt) for seeded experts the seeder
+     * marked online. Presence is heartbeat-based with a short window, so
+     * without this refresh every seeded expert reads as OFFLINE a few minutes
+     * after seeding — leaving the dashboard's "Online Experts" section empty.
+     * Dev data only: guarded by isSeedData=true.
+     */
+    private void refreshSeedExpertPresence() {
+        Instant now = Instant.now();
+        List<ExpertProfile> seedProfiles = expertProfileRepository.findByIsSeedDataTrue();
+        int refreshed = 0;
+        for (ExpertProfile profile : seedProfiles) {
+            if (Boolean.TRUE.equals(profile.getIsOnline())) {
+                profile.setLastActivityAt(now);
+                expertProfileRepository.save(profile);
+                refreshed++;
+            }
+        }
+        log.info("Refreshed presence for {} seeded experts.", refreshed);
     }
 
     /**

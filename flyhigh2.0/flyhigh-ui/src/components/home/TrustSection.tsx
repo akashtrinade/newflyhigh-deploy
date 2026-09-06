@@ -2,14 +2,53 @@ import { Phone, Star, UserCheck, Users } from "lucide-react"
 
 import { AnimatedStat } from "./AnimatedStat"
 import { Reveal } from "./Reveal"
-import { trustedCompanies, trustStats } from "./data"
+import { trustStats as fallbackTrustStats } from "./data"
 
 const statIcons = [Users, UserCheck, Phone, Star]
 
-export function TrustSection() {
+interface TrustSectionProps {
+  totalUsers?: number | null
+  verifiedExperts?: number | null
+  totalConsultations?: number | null
+  averageRating?: number | null
+}
+
+export function TrustSection({
+  totalUsers,
+  verifiedExperts,
+  totalConsultations,
+  averageRating,
+}: TrustSectionProps) {
+  const trustStats = [
+    {
+      value: totalUsers ? `${totalUsers.toLocaleString("en-IN")}+` : fallbackTrustStats[0].value,
+      label: fallbackTrustStats[0].label,
+      numeric: totalUsers ?? fallbackTrustStats[0].numeric,
+      suffix: "+",
+    },
+    {
+      value: verifiedExperts ? `${verifiedExperts.toLocaleString("en-IN")}+` : fallbackTrustStats[1].value,
+      label: fallbackTrustStats[1].label,
+      numeric: verifiedExperts ?? fallbackTrustStats[1].numeric,
+      suffix: "+",
+    },
+    {
+      value: totalConsultations ? `${totalConsultations.toLocaleString("en-IN")}+` : fallbackTrustStats[2].value,
+      label: fallbackTrustStats[2].label,
+      numeric: totalConsultations ?? fallbackTrustStats[2].numeric,
+      suffix: "+",
+    },
+    {
+      value: averageRating ? `${averageRating.toFixed(1)}/5` : fallbackTrustStats[3].value,
+      label: fallbackTrustStats[3].label,
+      numeric: averageRating ?? fallbackTrustStats[3].numeric,
+      suffix: "/5",
+      decimals: 1,
+    },
+  ] as const
   return (
     <section
-      id="pricing"
+      id="trust"
       className="border-y border-slate-200 bg-white py-12 md:py-14"
       aria-label="Trust and statistics"
     >
@@ -40,22 +79,6 @@ export function TrustSection() {
           })}
         </div>
 
-        <Reveal delay={200} className="mt-14 text-center">
-          <p className="mb-6 text-xs font-semibold tracking-[0.2em] text-slate-500 uppercase">
-            Trusted by teams at
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 md:gap-x-14">
-            {trustedCompanies.map((company) => (
-              <span
-                key={company}
-                className="text-base font-bold tracking-tight text-slate-400 select-none md:text-lg"
-                aria-label={company}
-              >
-                {company}
-              </span>
-            ))}
-          </div>
-        </Reveal>
       </div>
     </section>
   )

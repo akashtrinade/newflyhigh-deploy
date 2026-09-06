@@ -50,6 +50,12 @@ public class ResilienceConfig {
         return registry.circuitBreaker("razorpayCircuitBreaker");
     }
 
+    /** Circuit breaker for RazorpayX payout gateway calls (same policy as payments). */
+    @Bean
+    public CircuitBreaker razorpayxCircuitBreaker(CircuitBreakerRegistry registry) {
+        return registry.circuitBreaker("razorpayxCircuitBreaker");
+    }
+
     // ── Retry ─────────────────────────────────────────────────────
 
     @Bean
@@ -74,5 +80,27 @@ public class ResilienceConfig {
     @Bean
     public Retry razorpayRetry(RetryRegistry registry) {
         return registry.retry("razorpayRetry");
+    }
+
+    /**
+     * Retry for RazorpayX payout gateway calls. Same backoff as payments, but
+     * only retries transient failures (5xx/network) — 4xx validation errors
+     * from the gateway fail fast instead of burning 3 attempts.
+     */
+    @Bean
+    public Retry razorpayxRetry(RetryRegistry registry) {
+        RetryConfig config = RetryConfig.custom()
+                .maxAttempts(3)
+                .intervalFunction(IntervalFunction.ofExponentialBackoff(
+                        Duration.ofSeconds(1), 2.0))
+                .retryOnException(e -> e instanceof com.flyhigh.backend.exception.RazorpayXException rxe
+                        && rxe.isRetryable())
+                .ignoreExceptions(
+                        IllegalArgumentException.class,
+                        org.springframework.dao.DataIntegrityViolationException.class
+                )
+                .build();
+        registry.addConfiguration("razorpayxRetryConfig", config);
+        return registry.retry("razorpayxRetry", "razorpayxRetryConfig");
     }
 }

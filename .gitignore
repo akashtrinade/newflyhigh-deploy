@@ -62,6 +62,9 @@ build/
 !**/src/test/**/build/
 dist/
 
+# ---------- AWS CDK (generated assets, assets include stale lambda.js copies) ----------
+flyhigh2.0/infra/cdk.out/
+
 # ---------- Environment & Secrets ----------
 .env
 .env.*

@@ -26,7 +26,12 @@ public class MongoCollectionInitializer {
                     "interactions",
                     "session_payments",
                     "payouts",
-                    "otp_records"
+                    "otp_records",
+                    "expert_earnings",
+                    "disputes",
+                    "refunds",
+                    "notifications",
+                    "audit_log"
             );
 
             Set<String> existingCollections = mongoTemplate.getCollectionNames();

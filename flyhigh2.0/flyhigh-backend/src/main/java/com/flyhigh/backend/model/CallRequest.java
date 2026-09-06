@@ -44,6 +44,10 @@ public class CallRequest {
     private Boolean reviewSubmitted = false;  // true after client submits rating
     private Boolean feedbackPending = false;  // true if call ended but no review yet
 
+    // Expert response (acknowledgment / reply to client review)
+    private String expertResponse;      // Expert's reply to the client review
+    private Instant expertRespondedAt;  // When the expert submitted their response
+
     // --- Seed metadata ---
     private Boolean isSeedData = false;
     private String seedSource;
@@ -95,6 +99,12 @@ public class CallRequest {
 
     public Boolean getFeedbackPending() { return feedbackPending; }
     public void setFeedbackPending(Boolean feedbackPending) { this.feedbackPending = feedbackPending; }
+
+    public String getExpertResponse() { return expertResponse; }
+    public void setExpertResponse(String expertResponse) { this.expertResponse = expertResponse; }
+
+    public Instant getExpertRespondedAt() { return expertRespondedAt; }
+    public void setExpertRespondedAt(Instant expertRespondedAt) { this.expertRespondedAt = expertRespondedAt; }
 
     public Boolean getIsSeedData() { return isSeedData; }
     public void setIsSeedData(Boolean isSeedData) { this.isSeedData = isSeedData; }

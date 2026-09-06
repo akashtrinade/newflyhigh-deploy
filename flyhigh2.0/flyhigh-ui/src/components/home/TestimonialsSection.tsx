@@ -3,11 +3,31 @@ import { Star } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 
-import { testimonials } from "./data"
+import { testimonials as fallbackTestimonials } from "./data"
 import { Reveal } from "./Reveal"
 import { SectionLabel } from "./SectionLabel"
+import type { ReviewItem } from "@/types/public-stats"
 
-export function TestimonialsSection() {
+interface TestimonialsSectionProps {
+  reviews?: ReviewItem[] | null
+}
+
+export function TestimonialsSection({ reviews }: TestimonialsSectionProps) {
+  const displayTestimonials = reviews && reviews.length > 0
+    ? reviews.map((r) => ({
+        id: r.createdAt + r.clientName,
+        name: r.clientName,
+        role: "Client",
+        quote: r.feedback,
+        rating: r.rating,
+        avatar: r.clientName
+          .split(" ")
+          .map((n) => n.charAt(0))
+          .join("")
+          .toUpperCase()
+          .slice(0, 2),
+      }))
+    : fallbackTestimonials
   return (
     <section
       className="bg-white py-16 md:py-24"
@@ -28,7 +48,7 @@ export function TestimonialsSection() {
         </Reveal>
 
         <div className="mt-12 flex gap-6 overflow-x-auto pb-4 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
-          {testimonials.map((testimonial, index) => (
+          {displayTestimonials.map((testimonial, index) => (
             <Reveal key={testimonial.id} delay={index * 120}>
               <Card className="min-w-[300px] shrink-0 border border-slate-200 bg-white shadow-sm md:min-w-0">
                 <CardContent className="flex h-full flex-col p-6">

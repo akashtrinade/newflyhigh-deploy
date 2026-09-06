@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { AdminPagination } from "@/components/admin/AdminPagination"
 import { api } from "@/api/client"
 import { toast } from "@/hooks/use-toast"
 
@@ -24,17 +25,10 @@ interface PageResponse {
   page: number
 }
 
+const INR_FORMAT = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 0, maximumFractionDigits: 0 })
+function formatINR(a: number | undefined) { return INR_FORMAT.format(a ?? 0) }
+
 // ── Helpers ──
-
-const INR_FORMAT = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  minimumFractionDigits: 0,
-})
-
-function formatINR(amount: number): string {
-  return INR_FORMAT.format(amount)
-}
 
 function formatDate(isoString: string): string {
   if (!isoString) return "—"
@@ -264,32 +258,7 @@ export default function AdminPayments() {
                   ))}
                 </div>
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-4">
-                    <p className="text-xs text-slate-500">
-                      Page {page + 1} of {totalPages}
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPage(Math.max(0, page - 1))}
-                        disabled={page === 0}
-                      >
-                        Previous
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPage(page + 1)}
-                        disabled={page >= totalPages - 1}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} layout="justify-between" />
               </>
             )}
           </CardContent>

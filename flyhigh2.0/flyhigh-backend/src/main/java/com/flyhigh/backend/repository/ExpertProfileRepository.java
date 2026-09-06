@@ -13,4 +13,16 @@ public interface ExpertProfileRepository extends MongoRepository<ExpertProfile, 
     boolean existsByUserId(String userId);
     List<ExpertProfile> findByIsSeedDataTrue();
     void deleteByIsSeedDataTrueOrSeedSource(String seedSource);
+
+    /** Count approved expert profiles for public stats. */
+    long countByIsApprovedTrue();
+
+    /** Find approved experts currently online — used for featured section. */
+    List<ExpertProfile> findByIsApprovedTrueAndIsOnlineTrue();
+
+    /** Find all approved expert profiles — used for category grouping. */
+    List<ExpertProfile> findByIsApprovedTrue();
+
+    /** Find the profile awaiting a RazorpayX bank-validation result. */
+    Optional<ExpertProfile> findByPayoutValidationId(String validationId);
 }

@@ -13,12 +13,13 @@ public class ExpertEarningResponse {
     private double platformFee;
     private double expertEarning;
     private String status;
+    private String payoutStatus;
 
     public ExpertEarningResponse() {}
 
     public ExpertEarningResponse(String id, String sessionDate, String clientName,
                                  int duration, double clientPaid, double platformFee,
-                                 double expertEarning, String status) {
+                                 double expertEarning, String status, String payoutStatus) {
         this.id = id;
         this.sessionDate = sessionDate;
         this.clientName = clientName;
@@ -27,6 +28,7 @@ public class ExpertEarningResponse {
         this.platformFee = platformFee;
         this.expertEarning = expertEarning;
         this.status = status;
+        this.payoutStatus = payoutStatus;
     }
 
     public String getId() { return id; }
@@ -52,4 +54,7 @@ public class ExpertEarningResponse {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getPayoutStatus() { return payoutStatus; }
+    public void setPayoutStatus(String payoutStatus) { this.payoutStatus = payoutStatus; }
 }

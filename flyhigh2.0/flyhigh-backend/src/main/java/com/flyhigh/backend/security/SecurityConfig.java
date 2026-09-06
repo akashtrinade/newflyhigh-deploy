@@ -103,11 +103,14 @@ public class SecurityConfig {
                     auth.requestMatchers("/api/dev/**").permitAll();
                 }
 
+                // Public home page stats (no auth required)
+                auth.requestMatchers("/api/public/**").permitAll();
+
                 // Public contact form (no auth required)
                 auth.requestMatchers("/api/contact/send").permitAll();
 
-                // Razorpay webhook (HMAC-verified, no JWT needed)
-                auth.requestMatchers("/api/webhooks/razorpay").permitAll();
+                // Razorpay webhooks (HMAC-verified, no JWT needed)
+                auth.requestMatchers("/api/webhooks/razorpay", "/api/webhooks/razorpayx").permitAll();
 
                     // /api/auth/me, /api/auth/refresh, /api/auth/logout, /api/auth/heartbeat require authentication
                     auth.requestMatchers("/api/auth/me", "/api/auth/refresh", "/api/auth/logout", "/api/auth/heartbeat").authenticated();
@@ -172,7 +175,7 @@ public class SecurityConfig {
             // In dev, log warning and replace with default localhost origins
             System.err.println("[SECURITY WARNING] CORS origin '*' detected. "
                     + "Using default localhost origins for dev safety.");
-            origins = List.of("http://localhost:5173", "http://localhost:3000","https://newflyhigh-deploy-am5u.vercel.app");
+            origins = List.of("http://localhost:5173", "http://localhost:3000");
         }
 
         CorsConfiguration config = new CorsConfiguration();

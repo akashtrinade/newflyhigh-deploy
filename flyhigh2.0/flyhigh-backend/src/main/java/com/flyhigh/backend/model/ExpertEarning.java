@@ -47,6 +47,21 @@ public class ExpertEarning {
     @Indexed
     private EarningStatus status;
 
+    // ── Settlement fields ──
+    private Instant settlementStartTime;    // paid session completion time
+    private Instant settlementEndTime;      // settlementStartTime + configured period (default 24h)
+    private Instant settledAt;              // when settlement actually completed
+    private int settlementAttempts;         // number of settlement attempts; reset on success
+    private String settlementBlockReason;   // why settlement is blocked (null = not blocked)
+
+    // ── Payout linkage ──
+    private String payoutId;                // links to Payout document
+    private String payoutStatus;            // NOT_ELIGIBLE, ELIGIBLE, PROCESSING, SUCCESS, FAILED, RETRYING
+
+    // ── Dispute / Refund blocking flags ──
+    private String refundStatus;            // null, PARTIAL, FULL
+    private String disputeStatus;           // null, DISPUTED, RESOLVED
+
     private Instant createdAt;
 
     private Instant updatedAt;

@@ -9,9 +9,12 @@ public class AdminUserDto {
 
     private String id;
     private String email;
+    private String firstName;
+    private String lastName;
     private String fullName;
     private String role;
     private String country;
+    private String status; // "ACTIVE" | "INACTIVE" — matches UI expectations
     private Boolean isActive;
     private Boolean isAdmin;
     private Instant createdAt;
@@ -28,6 +31,7 @@ public class AdminUserDto {
         this.isActive = isActive;
         this.isAdmin = isAdmin;
         this.createdAt = createdAt;
+        this.status = Boolean.TRUE.equals(isActive) ? "ACTIVE" : "INACTIVE";
     }
 
     public String getId() { return id; }
@@ -35,6 +39,12 @@ public class AdminUserDto {
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
 
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
@@ -44,6 +54,9 @@ public class AdminUserDto {
 
     public String getCountry() { return country; }
     public void setCountry(String country) { this.country = country; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }

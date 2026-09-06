@@ -22,15 +22,22 @@ export default function ExtendSessionPrompt({
   onExtendComplete,
 }: ExtendSessionPromptProps) {
   const [isExtending, setIsExtending] = useState(false)
+  const [isRetrying, setIsRetrying] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
   const [dismissed, setDismissed] = useState(false)
+  const [verificationFailed, setVerificationFailed] = useState(false)
 
-  const { initiateExtension } = useRazorpay()
+  const {
+    initiateExtension,
+    hasPendingExtensionVerification,
+    retryExtensionVerification,
+  } = useRazorpay()
   const { emitSessionEvent } = usePaymentSocket()
   const { toast } = useToast()
 
   const handleExtend = async (minutes: number) => {
     setIsExtending(true)
+    setVerificationFailed(false)
     try {
       const result = await initiateExtension(interactionId, minutes, expertName)
       if (result && result.phase === "PAID_SESSION") {
@@ -43,9 +50,11 @@ export default function ExtendSessionPrompt({
         onExtendComplete()
       }
     } catch (err) {
+      setVerificationFailed(true)
       toast({
-        title: "Extension Failed",
-        description: err instanceof Error ? err.message : "Please try again.",
+        title: "Extension Verification Failed",
+        description:
+          "Your payment was captured but verification failed. Please retry — you will not be charged again.",
         variant: "destructive",
       })
     } finally {
@@ -54,7 +63,34 @@ export default function ExtendSessionPrompt({
     }
   }
 
-  if (dismissed) return null
+  const handleRetryVerification = async () => {
+    setIsRetrying(true)
+    try {
+      const result = await retryExtensionVerification()
+      if (result && result.phase === "PAID_SESSION") {
+        setVerificationFailed(false)
+        emitSessionEvent(interactionId, "session-extended")
+        toast({
+          title: "Session Extended!",
+          description: "Your extension has been applied.",
+          variant: "success",
+        })
+        onExtendComplete()
+      } else {
+        throw new Error("Verification did not complete")
+      }
+    } catch (err) {
+      toast({
+        title: "Verification Still Failing",
+        description: "Contact support — your payment is safe and will be reconciled.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsRetrying(false)
+    }
+  }
+
+  if (dismissed && !verificationFailed) return null
 
   return (
     <AnimatePresence>
@@ -65,7 +101,27 @@ export default function ExtendSessionPrompt({
         className="absolute bottom-24 left-1/2 z-20 -translate-x-1/2"
       >
         <div className="rounded-2xl border border-amber-500/30 bg-slate-900/95 px-6 py-4 shadow-2xl backdrop-blur-xl">
-          {!showOptions ? (
+          {verificationFailed && hasPendingExtensionVerification ? (
+            <div className="flex items-center gap-3">
+              <p className="text-sm text-slate-200">
+                Payment received — finish applying your extension:
+              </p>
+              <Button
+                size="sm"
+                disabled={isRetrying}
+                onClick={handleRetryVerification}
+                className="gap-1.5 bg-amber-500 text-slate-950 hover:bg-amber-400"
+              >
+                Retry Verification
+              </Button>
+              <button
+                onClick={() => setVerificationFailed(false)}
+                className="rounded-lg p-1.5 text-slate-600 transition-colors hover:text-slate-400"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          ) : !showOptions ? (
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Clock className="size-5 text-amber-400" />

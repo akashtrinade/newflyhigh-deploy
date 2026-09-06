@@ -77,6 +77,7 @@ interface SocketContextValue {
   emitCallResponse: (data: CallResponsePayload) => void
   emitNotifyCallEnded: (data: CallEndedPayload) => void
   joinRoom: (roomId: string, userEmail: string, role: string) => void
+  leaveRoom: () => void
   emitOffer: (offer: RTCSessionDesc, roomName: string) => void
   emitAnswer: (answer: RTCSessionDesc, roomName: string) => void
   emitIceCandidate: (candidate: RTCIceCandidateInit, roomName: string) => void
@@ -96,6 +97,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const socketRef = useRef<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
+  // Tracks the signaling room the user is in, so a socket.io reconnect can
+  // re-join it — otherwise the server rejects all signaling after a reconnect
+  // (room membership lives on the socket) and the call silently freezes.
+  const currentRoomRef = useRef<{ roomId: string; userEmail: string; role: string } | null>(null)
 
   const [incomingCall, setIncomingCall] = useState<IncomingCallData | null>(null)
   const [callStatusUpdate, setCallStatusUpdate] = useState<CallStatusUpdate | null>(null)
@@ -135,6 +140,16 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         userId: user.id || user.email,
         expertId: user.email,
       })
+      // Re-join the active call room after a reconnect — the server requires
+      // room membership for all signaling events (offer/answer/ICE/chat).
+      const room = currentRoomRef.current
+      if (room) {
+        socket.emit("join-room", {
+          roomId: room.roomId,
+          userEmail: room.userEmail,
+          role: room.role,
+        })
+      }
     })
 
     socket.on("disconnect", () => {
@@ -195,10 +210,15 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
   const joinRoom = useCallback(
     (roomId: string, userEmail: string, role: string) => {
+      currentRoomRef.current = { roomId, userEmail, role }
       socketRef.current?.emit("join-room", { roomId, userEmail, role })
     },
     [],
   )
+
+  const leaveRoom = useCallback(() => {
+    currentRoomRef.current = null
+  }, [])
 
   const emitOffer = useCallback((offer: RTCSessionDesc, roomName: string) => {
     socketRef.current?.emit("offer", { offer, roomName })
@@ -278,6 +298,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     emitCallResponse,
     emitNotifyCallEnded,
     joinRoom,
+    leaveRoom,
     emitOffer,
     emitAnswer,
     emitIceCandidate,

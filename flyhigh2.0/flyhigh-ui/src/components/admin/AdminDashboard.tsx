@@ -73,17 +73,10 @@ interface PageResponse<T> {
   page: number
 }
 
+const INR_FORMAT = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 0, maximumFractionDigits: 0 })
+function formatINR(a: number | undefined) { return INR_FORMAT.format(a ?? 0) }
+
 // ── Helpers ──
-
-const INR_FORMAT = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  minimumFractionDigits: 0,
-})
-
-function formatINR(amount: number): string {
-  return INR_FORMAT.format(amount)
-}
 
 function formatDate(isoString: string): string {
   if (!isoString) return "—"

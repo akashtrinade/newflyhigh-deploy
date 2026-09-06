@@ -256,12 +256,13 @@ io.on('connection', (socket) => {
       return socket.emit('error', { message: 'Authentication required.' });
     }
 
-    const { expertEmail, callRequestId, clientName, expertId, clientId } = data;
-
-    // Verify sender is the claimed client
-    if (!validateSender(socket, data.clientEmail)) {
-      // clientEmail not in payload, but we validate the socket is registered
+    // Only CLIENT-role senders may place calls
+    if ((socket.data.role || '').toUpperCase() !== 'CLIENT') {
+      console.warn(`[SECURITY] Rejected call-request from non-client ${socket.data.email}`);
+      return socket.emit('error', { message: 'Forbidden: Only clients can place calls.' });
     }
+
+    const { expertEmail, callRequestId, clientName, expertId, clientId } = data;
 
     console.log(`Call request from ${clientName} to expert email=${expertEmail} expertId=${expertId}`);
 
@@ -291,6 +292,12 @@ io.on('connection', (socket) => {
       return socket.emit('error', { message: 'Authentication required.' });
     }
 
+    // Only EXPERT-role senders may respond to calls
+    if ((socket.data.role || '').toUpperCase() !== 'EXPERT') {
+      console.warn(`[SECURITY] Rejected call-response from non-expert ${socket.data.email}`);
+      return socket.emit('error', { message: 'Forbidden: Only experts can respond to calls.' });
+    }
+
     const { clientEmail, callRequestId, action, roomId, rejectReason } = data;
     console.log(`Call response: ${action} for call ${callRequestId} to client ${clientEmail}`);
 
@@ -313,6 +320,14 @@ io.on('connection', (socket) => {
     }
 
     const { clientEmail, expertEmail } = data;
+
+    // Sender must be one of the participants of the ended call
+    const isParticipant = (clientEmail && socket.data.email === clientEmail)
+      || (expertEmail && socket.data.email === expertEmail);
+    if (!isParticipant) {
+      console.warn(`[SECURITY] Rejected notify-call-ended from non-participant ${socket.data.email}`);
+      return socket.emit('error', { message: 'Forbidden: Not a call participant.' });
+    }
 
     if (clientEmail) {
       const clientSockets = userSocketsByEmail.get(clientEmail) || [];
@@ -348,40 +363,70 @@ io.on('connection', (socket) => {
     }
 
     socket.join(roomId);
-    socket.data = { ...socket.data, roomId, userEmail, role };
-    console.log(`${userEmail} (${role}) joined room ${roomId}`);
+    // Keep the JWT-verified role — never overwrite with the client-supplied value
+    socket.data = { ...socket.data, roomId, userEmail, role: socket.data.role };
+    console.log(`${userEmail} (${socket.data.role}) joined room ${roomId}`);
   });
 
-  // ── Signaling handlers (relay — requires auth) ─────────────
+  // ── Signaling handlers (relay — requires auth + room membership) ──
+  function isInRoom(socket, roomName) {
+    return Boolean(roomName && socket.rooms.has(roomName));
+  }
+
   socket.on('offer', ({ offer, roomName }) => {
     if (!checkSocketRateLimit(socket, 'offer')) return;
     if (!requireAuth(socket)) return socket.emit('error', { message: 'Authentication required.' });
+    if (!isInRoom(socket, roomName)) {
+      console.warn(`[SECURITY] Rejected offer from ${socket.data.email}: not in room ${roomName}`);
+      return socket.emit('error', { message: 'Forbidden: Not a room member.' });
+    }
     socket.to(roomName).emit('offer', offer);
   });
 
   socket.on('answer', ({ answer, roomName }) => {
     if (!checkSocketRateLimit(socket, 'answer')) return;
     if (!requireAuth(socket)) return socket.emit('error', { message: 'Authentication required.' });
+    if (!isInRoom(socket, roomName)) {
+      console.warn(`[SECURITY] Rejected answer from ${socket.data.email}: not in room ${roomName}`);
+      return socket.emit('error', { message: 'Forbidden: Not a room member.' });
+    }
     socket.to(roomName).emit('answer', answer);
   });
 
   socket.on('ice-candidate', ({ candidate, roomName }) => {
     if (!checkSocketRateLimit(socket, 'ice-candidate')) return;
     if (!requireAuth(socket)) return socket.emit('error', { message: 'Authentication required.' });
+    if (!isInRoom(socket, roomName)) {
+      console.warn(`[SECURITY] Rejected ice-candidate from ${socket.data.email}: not in room ${roomName}`);
+      return socket.emit('error', { message: 'Forbidden: Not a room member.' });
+    }
     socket.to(roomName).emit('ice-candidate', candidate);
   });
 
   socket.on('end-call', ({ roomName }) => {
     if (!checkSocketRateLimit(socket, 'end-call')) return;
     if (!requireAuth(socket)) return socket.emit('error', { message: 'Authentication required.' });
+    if (!isInRoom(socket, roomName)) {
+      console.warn(`[SECURITY] Rejected end-call from ${socket.data.email}: not in room ${roomName}`);
+      return socket.emit('error', { message: 'Forbidden: Not a room member.' });
+    }
     socket.to(roomName).emit('call-ended');
   });
 
   socket.on('send-chat-message', ({ roomName, message }) => {
     if (!checkSocketRateLimit(socket, 'send-chat-message')) return;
     if (!requireAuth(socket)) return socket.emit('error', { message: 'Authentication required.' });
-    // Sanitize message length
-    const safeMessage = typeof message === 'string' ? message.slice(0, 5000) : '';
+    if (!isInRoom(socket, roomName)) {
+      console.warn(`[SECURITY] Rejected chat from ${socket.data.email}: not in room ${roomName}`);
+      return socket.emit('error', { message: 'Forbidden: Not a room member.' });
+    }
+    // Sanitize message text length, relay the full message object.
+    // Strip isMine so the receiver styles it as a remote message.
+    const safeMessage = {
+      ...message,
+      text: typeof message?.text === 'string' ? message.text.slice(0, 5000) : String(message ?? ''),
+      isMine: false,
+    };
     socket.to(roomName).emit('chat-message', safeMessage);
   });
 
@@ -454,30 +499,38 @@ server.listen(PORT, () => {
 function gracefulShutdown(signal) {
   console.log(`\n[SHUTDOWN] Received ${signal} — shutting down gracefully...`);
 
+  let didExit = false;
+  const forceExit = setTimeout(() => {
+    if (!didExit) {
+      console.error('[SHUTDOWN] Timed out — forcing exit.');
+      process.exit(1);
+    }
+  }, 10_000);
+
+  const finish = (code) => {
+    if (didExit) return;
+    didExit = true;
+    clearTimeout(forceExit);
+    process.exit(code);
+  };
+
   // Notify all connected clients
-  for (const [socketId, userData] of connectedUsers) {
+  for (const [socketId] of connectedUsers) {
     const socket = io.sockets.sockets.get(socketId);
     if (socket) {
       socket.emit('server-shutdown', { message: 'Server is restarting. Please reconnect.' });
     }
   }
 
-  // Close the HTTP server — stops accepting new connections
-  server.close(() => {
-    console.log('[SHUTDOWN] HTTP server closed.');
-
-    // Close all Socket.IO connections
-    io.close(() => {
-      console.log('[SHUTDOWN] Socket.IO server closed.');
-      process.exit(0);
+  // Close Socket.IO first — live WebSocket connections keep the HTTP server
+  // open, so server.close() alone would never complete.
+  io.close(() => {
+    console.log('[SHUTDOWN] Socket.IO server closed.');
+    server.close(() => {
+      console.log('[SHUTDOWN] HTTP server closed.');
+      finish(0);
     });
   });
-
-  // Force exit after 10s if graceful close hangs
-  setTimeout(() => {
-    console.error('[SHUTDOWN] Timed out — forcing exit.');
-    process.exit(1);
-  }, 10_000);
 }
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));

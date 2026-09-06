@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface SessionPaymentRepository extends MongoRepository<SessionPayment, String> {
     List<SessionPayment> findByInteractionId(String interactionId);
+    List<SessionPayment> findByInteractionIdIn(List<String> interactionIds);
 }

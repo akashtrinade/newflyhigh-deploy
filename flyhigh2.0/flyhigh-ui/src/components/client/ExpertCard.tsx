@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
-import { CalendarPlus, Eye, Loader2, MessageCircle, Star } from "lucide-react"
+import { Eye, Loader2, MessageCircle, Star } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -161,10 +161,6 @@ export function ExpertCard({ expert }: { expert: ExpertSummary }) {
               {connecting ? "Connecting..." : "Connect Now"}
             </Button>
           )}
-          <Button className="h-9 gap-2 bg-slate-950 hover:bg-slate-800">
-            <CalendarPlus className="size-4" />
-            Book Session
-          </Button>
         </div>
       </CardContent>
     </Card>

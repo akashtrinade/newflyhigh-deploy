@@ -7,8 +7,14 @@ import type {
 } from "@/types/payment"
 import { useAuth } from "@/contexts/AuthContext"
 
+interface PendingExtensionVerification {
+  interactionId: string
+  payment: RazorpayPaymentResponse
+}
+
 interface UseRazorpayReturn {
   isLoading: boolean
+  hasPendingExtensionVerification: boolean
   initiatePayment: (
     interactionId: string,
     durationMinutes: number,
@@ -19,6 +25,9 @@ interface UseRazorpayReturn {
     durationMinutes: number,
     expertName: string,
   ) => Promise<SessionStateResponse | null>
+  /** Retries verification of an extension whose payment succeeded but whose
+   *  verify call failed — no new charge, the backend is idempotent. */
+  retryExtensionVerification: () => Promise<SessionStateResponse | null>
 }
 
 const RAZORPAY_SCRIPT_URL = "https://checkout.razorpay.com/v1/checkout.js"
@@ -41,6 +50,8 @@ function loadRazorpayScript(): Promise<boolean> {
 export function useRazorpay(): UseRazorpayReturn {
   const { user } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
+  const [pendingExtensionVerification, setPendingExtensionVerification] =
+    useState<PendingExtensionVerification | null>(null)
 
   const openCheckout = useCallback(
     (
@@ -151,14 +162,23 @@ export function useRazorpay(): UseRazorpayReturn {
 
         const payment = await openCheckout(order, expertName, durationMinutes)
 
-        const result = await verifyExtension({
-          interactionId,
-          razorpayPaymentId: payment.razorpay_payment_id,
-          razorpayOrderId: payment.razorpay_order_id,
-          razorpaySignature: payment.razorpay_signature,
-        })
+        // Keep the payload until verification succeeds — the money is already
+        // captured, so a failed verify must be retriable without a new charge.
+        setPendingExtensionVerification({ interactionId, payment })
 
-        return result
+        try {
+          const result = await verifyExtension({
+            interactionId,
+            razorpayPaymentId: payment.razorpay_payment_id,
+            razorpayOrderId: payment.razorpay_order_id,
+            razorpaySignature: payment.razorpay_signature,
+          })
+          setPendingExtensionVerification(null)
+          return result
+        } catch (verifyErr) {
+          // Payment captured but verification failed — keep payload for retry
+          throw verifyErr
+        }
       } catch (err) {
         if (err instanceof Error && err.message === "Payment dismissed") {
           return null
@@ -171,9 +191,29 @@ export function useRazorpay(): UseRazorpayReturn {
     [openCheckout],
   )
 
+  const retryExtensionVerification = useCallback(async (): Promise<SessionStateResponse | null> => {
+    if (!pendingExtensionVerification) return null
+    const { interactionId, payment } = pendingExtensionVerification
+    setIsLoading(true)
+    try {
+      const result = await verifyExtension({
+        interactionId,
+        razorpayPaymentId: payment.razorpay_payment_id,
+        razorpayOrderId: payment.razorpay_order_id,
+        razorpaySignature: payment.razorpay_signature,
+      })
+      setPendingExtensionVerification(null)
+      return result
+    } finally {
+      setIsLoading(false)
+    }
+  }, [pendingExtensionVerification])
+
   return {
     isLoading,
+    hasPendingExtensionVerification: pendingExtensionVerification !== null,
     initiatePayment,
     initiateExtension,
+    retryExtensionVerification,
   }
 }

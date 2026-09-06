@@ -8,16 +8,18 @@ import com.flyhigh.backend.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import jakarta.annotation.PostConstruct;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -37,19 +39,22 @@ public class ExpertEarningService {
     private final UserRepository userRepository;
     private final ExpertProfileRepository expertProfileRepository;
     private final PricingService pricingService;
+    private final PlatformSettingsService settingsService;
 
     public ExpertEarningService(ExpertEarningRepository expertEarningRepository,
                                 SessionPaymentRepository sessionPaymentRepository,
                                 InteractionRepository interactionRepository,
                                 UserRepository userRepository,
                                 ExpertProfileRepository expertProfileRepository,
-                                PricingService pricingService) {
+                                PricingService pricingService,
+                                PlatformSettingsService settingsService) {
         this.expertEarningRepository = expertEarningRepository;
         this.sessionPaymentRepository = sessionPaymentRepository;
         this.interactionRepository = interactionRepository;
         this.userRepository = userRepository;
         this.expertProfileRepository = expertProfileRepository;
         this.pricingService = pricingService;
+        this.settingsService = settingsService;
     }
 
     // ── Earning Creation ──
@@ -139,6 +144,8 @@ public class ExpertEarningService {
                 .platformFee(platformFee)
                 .expertEarningAmount(expertEarningAmount)
                 .status(EarningStatus.PENDING)
+                .settlementStartTime(now)
+                .settlementEndTime(now.plus(Duration.ofMinutes(settingsService.getSettlementPeriodMinutes())))
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
@@ -169,10 +176,23 @@ public class ExpertEarningService {
             lifetimeEarnings += earningAmount;
             platformCommission += fee;
 
-            if (e.getStatus() == EarningStatus.AVAILABLE) {
+            EarningStatus status = e.getStatus();
+            boolean inWithdrawal = "PROCESSING".equals(e.getPayoutStatus());
+            // AVAILABLE only — PAID means the payout already reached the expert.
+            // Earnings claimed by an active payout (payoutStatus PROCESSING) are
+            // already inside a withdrawal request, so they leave the available
+            // balance immediately. If the payout fails they are released back to
+            // AVAILABLE and reappear here.
+            if (status == EarningStatus.AVAILABLE && !inWithdrawal) {
                 availableBalance += earningAmount;
-            } else if (e.getStatus() == EarningStatus.PENDING) {
+            } else if (status == EarningStatus.PENDING
+                    || status == EarningStatus.SETTLEMENT_PROCESSING
+                    || status == EarningStatus.DISPUTED) {
+                // SETTLEMENT_PROCESSING and DISPUTED are not yet available — show as pending
                 pendingBalance += earningAmount;
+            } else if (status == EarningStatus.REFUND_ADJUSTED) {
+                // Refund-adjusted earnings: if the earning amount was reduced, the remaining
+                // is effectively lost (refunded). Include in lifetime but neither balance.
             }
             // WITHDRAWN earnings are already included in lifetimeEarnings
         }
@@ -203,29 +223,40 @@ public class ExpertEarningService {
                                            String search) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        // Resolve date range
-        Instant from = (fromDate != null && !fromDate.isEmpty()) ? Instant.parse(fromDate) : null;
-        Instant to = (toDate != null && !toDate.isEmpty()) ? Instant.parse(toDate) : null;
+        // Resolve date range — accepts ISO instants and date-only strings ("2026-08-13")
+        Instant from = parseDateFilter(fromDate, false);
+        Instant to = parseDateFilter(toDate, true);
 
-        // Resolve status filter
-        EarningStatus earningStatus = null;
+        // Resolve status filter — supports comma-separated list (e.g. "AVAILABLE,PAID")
+        List<EarningStatus> earningStatuses = new ArrayList<>();
         if (status != null && !status.isEmpty() && !status.equals("ALL")) {
-            try {
-                earningStatus = EarningStatus.valueOf(status.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                // Invalid status → fall back to no status filter
+            for (String part : status.split(",")) {
+                try {
+                    earningStatuses.add(EarningStatus.valueOf(part.trim().toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    // Invalid status → skip
+                }
             }
         }
 
         // DB-level paginated query (with date range if provided)
         Page<ExpertEarning> earningsPage;
-        if (earningStatus != null && from != null && to != null) {
-            earningsPage = expertEarningRepository
-                    .findByExpertIdAndStatusAndCreatedAtBetweenOrderByCreatedAtDesc(
-                            expertId, earningStatus, from, to, pageable);
-        } else if (earningStatus != null) {
-            earningsPage = expertEarningRepository
-                    .findByExpertIdAndStatusOrderByCreatedAtDesc(expertId, earningStatus, pageable);
+        if (!earningStatuses.isEmpty() && from != null && to != null) {
+            earningsPage = earningStatuses.size() == 1
+                    ? expertEarningRepository
+                            .findByExpertIdAndStatusAndCreatedAtBetweenOrderByCreatedAtDesc(
+                                    expertId, earningStatuses.get(0), from, to, pageable)
+                    : expertEarningRepository
+                            .findByExpertIdAndStatusInAndCreatedAtBetweenOrderByCreatedAtDesc(
+                                    expertId, earningStatuses, from, to, pageable);
+        } else if (!earningStatuses.isEmpty()) {
+            earningsPage = earningStatuses.size() == 1
+                    ? expertEarningRepository
+                            .findByExpertIdAndStatusOrderByCreatedAtDesc(
+                                    expertId, earningStatuses.get(0), pageable)
+                    : expertEarningRepository
+                            .findByExpertIdAndStatusInOrderByCreatedAtDesc(
+                                    expertId, earningStatuses, pageable);
         } else if (from != null && to != null) {
             earningsPage = expertEarningRepository
                     .findByExpertIdAndCreatedAtBetweenOrderByCreatedAtDesc(expertId, from, to, pageable);
@@ -252,15 +283,41 @@ public class ExpertEarningService {
     }
 
     /**
-     * Returns a single earning by ID, with security validated by the caller.
+     * Returns a single earning by ID, verifying the earning belongs to the
+     * given expert before returning it (prevents IDOR on other experts' earnings).
      */
-    public ExpertEarningResponse getEarningById(String earningId) {
+    public ExpertEarningResponse getEarningByIdForExpert(String earningId, String expertId) {
         ExpertEarning earning = expertEarningRepository.findById(earningId)
                 .orElseThrow(() -> new IllegalArgumentException("Earning not found: " + earningId));
+        if (!earning.getExpertId().equals(expertId)) {
+            throw new SecurityException("Not authorized to access this earning");
+        }
         return batchToResponses(List.of(earning)).get(0);
     }
 
     // ── Helpers ──
+
+    /**
+     * Parses a date filter value. Accepts full ISO instants and date-only
+     * strings ("2026-08-13" from <input type="date">). Date-only "to" values
+     * are interpreted as end-of-day so the whole day is included.
+     * Returns null for empty or unparseable values (treated as no filter).
+     */
+    private Instant parseDateFilter(String value, boolean endOfDay) {
+        if (value == null || value.isEmpty()) return null;
+        try {
+            return Instant.parse(value);
+        } catch (DateTimeParseException e) {
+            try {
+                LocalDate date = LocalDate.parse(value);
+                return endOfDay
+                        ? date.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant()
+                        : date.atStartOfDay(ZoneOffset.UTC).toInstant();
+            } catch (DateTimeParseException e2) {
+                return null;
+            }
+        }
+    }
 
     /**
      * Batch-loads interactions and users, then maps earnings to response DTOs.
@@ -320,7 +377,8 @@ public class ExpertEarningService {
                 earning.getClientPaidAmount() != null ? earning.getClientPaidAmount() : 0,
                 earning.getPlatformFee() != null ? earning.getPlatformFee() : 0,
                 earning.getExpertEarningAmount() != null ? earning.getExpertEarningAmount() : 0,
-                earning.getStatus() != null ? earning.getStatus().name() : "PENDING"
+                earning.getStatus() != null ? earning.getStatus().name() : "PENDING",
+                earning.getPayoutStatus()
         );
     }
 

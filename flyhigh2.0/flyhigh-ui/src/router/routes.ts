@@ -5,13 +5,13 @@ import { Navigate } from "react-router-dom"
 
 const HomePage = lazy(() => import("@/components/home/HomePage"))
 const AboutUsPage = lazy(() => import("@/components/about/AboutUsPage"))
-const PricingPage = lazy(() => import("@/components/pricing/PricingPage"))
 const HowItWorksPage = lazy(() => import("@/components/how-it-works/HowItWorksPage"))
 const ContactPage = lazy(() => import("@/components/contact/ContactPage"))
-const NotFoundPage = lazy(() => import("@/components/NotFoundPage"))
 const LoginPage = lazy(() => import("@/components/auth/LoginPage"))
 const SignupPage = lazy(() => import("@/components/auth/SignupPage"))
 const ForgotPasswordPage = lazy(() => import("@/components/auth/ForgotPasswordPage"))
+const TermsAndConditionsPage = lazy(() => import("@/components/legal/TermsAndConditionsPage"))
+const PrivacyPolicyPage = lazy(() => import("@/components/legal/PrivacyPolicyPage"))
 const ClientDashboard = lazy(() => import("@/components/client/ClientDashboard"))
 const SearchExpertsPage = lazy(() => import("@/components/client/SearchExpertsPage"))
 const MySessionsPage = lazy(() => import("@/components/client/MySessionsPage"))
@@ -19,9 +19,11 @@ const ClientProfilePage = lazy(() => import("@/components/client/ClientProfilePa
 const ClientSettingsPage = lazy(() => import("@/components/client/ClientSettingsPage"))
 const NotificationsPage = lazy(() => import("@/components/client/NotificationsPage"))
 const ExpertProfileViewPage = lazy(() => import("@/components/client/ExpertProfileViewPage"))
+const PaymentHistoryPage = lazy(() => import("@/components/client/PaymentHistoryPage"))
 const ExpertProfileCompletion = lazy(() => import("@/components/expert/ExpertProfileCompletion"))
 const ExpertSessionsPage = lazy(() => import("@/components/expert/ExpertSessionsPage"))
 const ExpertDashboard = lazy(() => import("@/components/expert/ExpertEarningsPage"))
+const ExpertReviewsPage = lazy(() => import("@/components/expert/ExpertReviewsPage"))
 const ExpertSettingsPage = lazy(() => import("@/components/expert/ExpertSettingsPage"))
 const VideoCallPage = lazy(() => import("@/components/video-call/VideoCallPage"))
 const CallCompletedPage = lazy(() => import("@/components/video-call/CallCompletedPage"))
@@ -32,6 +34,10 @@ const AdminConsultations = lazy(() => import("@/components/admin/AdminConsultati
 const AdminPayments = lazy(() => import("@/components/admin/AdminPayments"))
 const AdminReports = lazy(() => import("@/components/admin/AdminReports"))
 const AdminSettings = lazy(() => import("@/components/admin/AdminSettings"))
+const AdminDisputes = lazy(() => import("@/components/admin/AdminDisputes"))
+const AdminPayouts = lazy(() => import("@/components/admin/AdminPayouts"))
+const AdminRefunds = lazy(() => import("@/components/admin/AdminRefunds"))
+const AdminEarnings = lazy(() => import("@/components/admin/AdminEarnings"))
 
 // ── Route configuration ──
 
@@ -48,19 +54,20 @@ export interface AppRoute {
 export const publicRoutes: AppRoute[] = [
   { path: "/", element: HomePage },
   { path: "/about", element: AboutUsPage },
-  { path: "/pricing", element: PricingPage },
   { path: "/how-it-works", element: HowItWorksPage },
   { path: "/contact", element: ContactPage },
   { path: "/login", element: LoginPage },
   { path: "/signup", element: SignupPage },
   { path: "/forgot-password", element: ForgotPasswordPage },
-  { path: "*", element: NotFoundPage },
+  { path: "/terms", element: TermsAndConditionsPage },
+  { path: "/privacy", element: PrivacyPolicyPage },
 ]
 
 export const clientRoutes: AppRoute[] = [
   { path: "/client-dashboard", element: ClientDashboard, auth: { allowedRoles: ["CLIENT"] } },
   { path: "/search-experts", element: SearchExpertsPage, auth: { allowedRoles: ["CLIENT"] } },
   { path: "/my-sessions", element: MySessionsPage, auth: { allowedRoles: ["CLIENT"] } },
+  { path: "/payment-history", element: PaymentHistoryPage, auth: { allowedRoles: ["CLIENT"] } },
   { path: "/notifications", element: NotificationsPage, auth: { allowedRoles: ["CLIENT", "EXPERT"] } },
   { path: "/client-profile", element: ClientProfilePage, auth: { allowedRoles: ["CLIENT"] } },
   { path: "/settings", element: ClientSettingsPage, auth: { allowedRoles: ["CLIENT"] } },
@@ -74,6 +81,8 @@ export const expertRoutes: AppRoute[] = [
   { path: "/expert/dashboard", element: ExpertDashboard, auth: { requireProfileCompleted: true } },
   // Sessions: full sessions management page
   { path: "/expert/sessions", element: ExpertSessionsPage, auth: { requireProfileCompleted: true } },
+  // Reviews: view and respond to client reviews
+  { path: "/expert/reviews", element: ExpertReviewsPage, auth: { requireProfileCompleted: true } },
   // Settings: security, notifications, account
   { path: "/expert/settings", element: ExpertSettingsPage, auth: { requireProfileCompleted: true } },
 ]
@@ -94,6 +103,10 @@ export const adminRoutes: AppRoute[] = [
   { path: "/admin/clients", element: AdminClients, auth: { allowedRoles: ["ADMIN"] } },
   { path: "/admin/consultations", element: AdminConsultations, auth: { allowedRoles: ["ADMIN"] } },
   { path: "/admin/payments", element: AdminPayments, auth: { allowedRoles: ["ADMIN"] } },
+  { path: "/admin/earnings", element: AdminEarnings, auth: { allowedRoles: ["ADMIN"] } },
+  { path: "/admin/payouts", element: AdminPayouts, auth: { allowedRoles: ["ADMIN"] } },
+  { path: "/admin/disputes", element: AdminDisputes, auth: { allowedRoles: ["ADMIN"] } },
+  { path: "/admin/refunds", element: AdminRefunds, auth: { allowedRoles: ["ADMIN"] } },
   { path: "/admin/reports", element: AdminReports, auth: { allowedRoles: ["ADMIN"] } },
   { path: "/admin/settings", element: AdminSettings, auth: { allowedRoles: ["ADMIN"] } },
 ]
@@ -107,9 +120,15 @@ import {
   LayoutDashboard,
   Search,
   Settings,
+  Star,
   UserCircle,
   Users,
   BarChart3,
+  ShieldAlert,
+  Wallet,
+  RotateCcw,
+  Banknote,
+  CreditCard,
 } from "lucide-react"
 import type { SidebarNavItem } from "@/components/layout/Sidebar"
 
@@ -117,6 +136,7 @@ export const clientNavItems: SidebarNavItem[] = [
   { label: "Dashboard", href: "/client-dashboard", icon: LayoutDashboard },
   { label: "Search Experts", href: "/search-experts", icon: Search },
   { label: "My Sessions", href: "/my-sessions", icon: CalendarCheck },
+  { label: "Payment History", href: "/payment-history", icon: CreditCard },
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Profile", href: "/client-profile", icon: UserCircle },
   { label: "Settings", href: "/settings", icon: Settings },
@@ -125,7 +145,8 @@ export const clientNavItems: SidebarNavItem[] = [
 export const expertNavItems: SidebarNavItem[] = [
   { label: "Dashboard", href: "/expert/dashboard", icon: LayoutDashboard },
   { label: "My Profile", href: "/expert/profile", icon: UserCircle },
-  { label: "Sessions", href: "/expert/sessions", icon: CalendarCheck },
+  { label: "My Sessions", href: "/expert/sessions", icon: CalendarCheck },
+  { label: "My Reviews", href: "/expert/reviews", icon: Star },
   { label: "Settings", href: "/expert/settings", icon: Settings },
 ]
 
@@ -135,6 +156,10 @@ export const adminNavItems: SidebarNavItem[] = [
   { label: "Clients", href: "/admin/clients", icon: Users },
   { label: "Consultations", href: "/admin/consultations", icon: CalendarCheck },
   { label: "Payments", href: "/admin/payments", icon: DollarSign },
+  { label: "Earnings", href: "/admin/earnings", icon: Wallet },
+  { label: "Payouts", href: "/admin/payouts", icon: Banknote },
+  { label: "Disputes", href: "/admin/disputes", icon: ShieldAlert },
+  { label: "Refunds", href: "/admin/refunds", icon: RotateCcw },
   { label: "Reports", href: "/admin/reports", icon: BarChart3 },
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ]

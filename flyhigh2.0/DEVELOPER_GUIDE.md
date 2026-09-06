@@ -1,9 +1,11 @@
 # FlyHigh 2.0 — Developer Guide
 
-> **Last updated:** 2026-07-07
+> **Last updated:** 2026-08-17
 > **Branch:** `prod`
 
 Comprehensive reference for developing, testing, and deploying the FlyHigh video-consultation marketplace. Covers local development setup, architecture, coding patterns, and AWS deployment.
+
+> **Recent changes (Aug 2026):** ownership-enforced payment/session endpoints; payments bound to session orders with webhook-backed extension handling; backend-written in-app notifications; cumulative paid-time tracking; admin credential fail-fast + page-shaped admin API; UI 401 token refresh, extension retry, call-room rejoin; Terms/Privacy pages; ₹ price + rating search filters; refunds require COMPLETED sessions. See `PROJECT_UNDERSTANDING.md` → "Key Fixes & Hardening" for details.
 
 ---
 

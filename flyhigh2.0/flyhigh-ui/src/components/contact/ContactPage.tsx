@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import {
   ArrowRight,
   Clock,
   Mail,
   MapPin,
-  Briefcase,
+  Phone,
+  Building2,
   Send,
   CheckCircle,
   MessageSquare,
@@ -13,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/layout/Navbar"
+import { useAuth } from "@/contexts/AuthContext"
 import { api } from "@/api/client"
 import { Footer } from "@/components/layout/Footer"
 import { Reveal } from "@/components/home/Reveal"
@@ -29,20 +32,21 @@ type ContactInfo = {
 
 const contactInfo: ContactInfo[] = [
   {
-    icon: Briefcase,
-    title: "Company",
-    detail: "Trinade AI Technologies Pvt Ltd",
+    icon: Building2,
+    title: "Office",
+    detail: "#06, Green Valley Apartments,\nGorantla, Guntur,\nAndhra Pradesh 522034, India",
   },
   {
-    icon: MapPin,
-    title: "Location",
-    detail: "Maharashtra, India",
+    icon: Phone,
+    title: "Phone",
+    detail: "+91 9490754923",
+    link: "tel:+919490754923",
   },
   {
     icon: Mail,
     title: "Email",
-    detail: "support@flyhigh.com",
-    link: "mailto:support@flyhigh.com",
+    detail: "info@trinade.com",
+    link: "mailto:info@trinade.com",
   },
 ]
 
@@ -63,6 +67,8 @@ const faqs = [
 
 /* ─── Component ─── */
 export default function ContactPage() {
+  const navigate = useNavigate()
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -74,6 +80,9 @@ export default function ContactPage() {
   const [errorMsg, setErrorMsg] = useState("")
 
   useEffect(() => window.scrollTo(0, 0), [])
+
+  const handleFindExpert = () => navigate(user ? "/search-experts" : "/login")
+  const handleBrowseFaq = () => document.getElementById("faq-section")?.scrollIntoView({ behavior: "smooth" })
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -182,12 +191,12 @@ export default function ContactPage() {
                             {info.link ? (
                               <a
                                 href={info.link}
-                                className="mt-0.5 block text-sm font-semibold text-[var(--flyhigh-text)] transition-colors hover:text-[var(--flyhigh-primary)]"
+                                className="mt-0.5 block text-sm font-semibold text-[var(--flyhigh-text)] transition-colors hover:text-[var(--flyhigh-primary)] whitespace-pre-line"
                               >
                                 {info.detail}
                               </a>
                             ) : (
-                              <p className="mt-0.5 text-sm font-semibold text-[var(--flyhigh-text)]">
+                              <p className="mt-0.5 text-sm font-semibold text-[var(--flyhigh-text)] whitespace-pre-line">
                                 {info.detail}
                               </p>
                             )}
@@ -466,6 +475,7 @@ export default function ContactPage() {
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Button
                 size="lg"
+                onClick={handleFindExpert}
                 className="h-12 gap-2 bg-[var(--flyhigh-primary)] px-8 text-base shadow-lg shadow-indigo-500/25 hover:bg-[var(--flyhigh-primary-hover)]"
               >
                 Find an Expert
@@ -474,6 +484,7 @@ export default function ContactPage() {
               <Button
                 size="lg"
                 variant="outline"
+                onClick={handleBrowseFaq}
                 className="h-12 border-slate-300 px-8 text-base text-slate-700 hover:bg-white"
               >
                 Browse FAQ

@@ -9,12 +9,29 @@ import {
   CardHeader,
 } from "@/components/ui/card"
 
-import { featuredExperts } from "./data"
+import { featuredExperts as fallbackExperts } from "./data"
 import { Reveal } from "./Reveal"
 import { SectionLabel } from "./SectionLabel"
 import { getClientHourlyRate } from "@/lib/pricing"
+import type { FeaturedExpert } from "@/types/public-stats"
 
-export function FeaturedExpertsSection() {
+interface FeaturedExpertsSectionProps {
+  experts?: FeaturedExpert[] | null
+}
+
+export function FeaturedExpertsSection({ experts }: FeaturedExpertsSectionProps) {
+  const displayExperts: FeaturedExpert[] = experts && experts.length > 0
+    ? experts
+    : fallbackExperts.map((e) => ({
+        id: e.id,
+        name: e.name,
+        category: e.category,
+        rating: e.rating,
+        reviewCount: e.sessions,
+        hourlyRate: e.price,
+        isOnline: e.online ?? false,
+        initials: e.avatar,
+      }))
   return (
     <section
       id="experts"
@@ -37,17 +54,17 @@ export function FeaturedExpertsSection() {
         </Reveal>
 
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {featuredExperts.map((expert, index) => (
+          {displayExperts.map((expert, index) => (
             <Reveal key={expert.id} delay={index * 100}>
               <Card className="h-full border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:scale-[1.02] hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-500/10">
                 <CardHeader className="items-center text-center">
                   <div className="relative">
                     <Avatar size="lg" className="size-16">
                       <AvatarFallback className="bg-gradient-to-br from-[var(--flyhigh-primary)] to-[var(--flyhigh-primary-hover)] text-lg font-bold text-white">
-                        {expert.avatar}
+                        {expert.initials}
                       </AvatarFallback>
                     </Avatar>
-                    {expert.online && (
+                    {expert.isOnline && (
                       <span className="absolute right-0 bottom-0 size-3.5 rounded-full border-2 border-white bg-emerald-500" />
                     )}
                   </div>
@@ -74,11 +91,11 @@ export function FeaturedExpertsSection() {
                       {expert.rating}
                     </span>
                     <span className="text-slate-600">
-                      {expert.sessions} sessions
+                      {expert.reviewCount} sessions
                     </span>
                   </div>
                   <p className="mt-3 text-xl font-bold text-[var(--flyhigh-text)]">
-                    ₹{getClientHourlyRate(expert.price).toFixed(0)}
+                    ₹{getClientHourlyRate(expert.hourlyRate).toFixed(0)}
                     <span className="text-sm font-medium text-slate-500">
                       /hr
                     </span>

@@ -28,12 +28,27 @@ export default function CallCompletedPage() {
   const { toast } = useToast()
 
   const callRequestId = searchParams.get("callRequestId") || ""
+  const interactionId = searchParams.get("interactionId") || ""
   const peerName = searchParams.get("peerName") || "Participant"
   const durationSeconds = parseInt(searchParams.get("duration") || "0", 10)
   const clientAmount = parseFloat(searchParams.get("amount") || "0")
   const expertAmount = parseFloat(searchParams.get("expertAmount") || "0")
   const dateTime = searchParams.get("dateTime") || new Date().toLocaleString()
   const isExpert = user?.role === "EXPERT"
+
+  // Resolve paid status from the server instead of trusting URL params —
+  // the dashboard's "Leave Feedback" flow previously passed amount=0 and hid
+  // the rating form even for paid sessions.
+  const [resolvedPaidAmount, setResolvedPaidAmount] = useState<number | null>(null)
+  useEffect(() => {
+    if (!interactionId) return
+    api
+      .get<{ totalPaidAmount?: number | null }>(`/payments/session-state/${interactionId}`)
+      .then((s) => setResolvedPaidAmount(s.totalPaidAmount ?? 0))
+      .catch(() => setResolvedPaidAmount(null)) // fall back to URL amount
+  }, [interactionId])
+
+  const isPaidSession = resolvedPaidAmount !== null ? resolvedPaidAmount > 0 : clientAmount > 0
 
   // Rating state (client only)
   const [rating, setRating] = useState(0)
@@ -100,9 +115,10 @@ export default function CallCompletedPage() {
     }
   }
 
-  // ── Submitted / Expert view ──
+  // ── Summary-only view (expert, submitted rating, or free-trial without payment) ──
 
-  if (submitted || isExpert) {
+  if (submitted || isExpert || !isPaidSession) {
+    const isFreeTrial = !isPaidSession && !isExpert
     return (
       <div className="flex min-h-svh items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
         <motion.div
@@ -132,7 +148,9 @@ export default function CallCompletedPage() {
             <p className="mb-6 text-sm text-slate-600">
               {submitted
                 ? "Your rating and review have been submitted successfully."
-                : `Your video consultation with ${peerName} has ended.`}
+                : isFreeTrial
+                  ? `Your free trial with ${peerName} has ended. No payment was made for this session.`
+                  : `Your video consultation with ${peerName} has ended.`}
             </p>
 
             {/* Summary details */}
@@ -181,7 +199,7 @@ export default function CallCompletedPage() {
     )
   }
 
-  // ── Client rating view ──
+  // ── Client rating view (only for paid sessions) ──
 
   return (
     <div className="flex min-h-svh items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
@@ -194,7 +212,7 @@ export default function CallCompletedPage() {
           <div className="mb-4 text-center">
             <h2 className="mb-1 text-xl font-bold text-slate-900">Call Completed</h2>
             <p className="text-sm text-slate-600">
-              Your consultation with <span className="font-medium">{peerName}</span> has ended.
+              Your paid consultation with <span className="font-medium">{peerName}</span> has ended.
             </p>
           </div>
 

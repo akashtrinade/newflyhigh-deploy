@@ -205,7 +205,11 @@ export default function ExpertProfileViewPage() {
                   {connecting ? "Connecting..." : "Connect Now"}
                 </Button>
               )}
-              <Button className="h-10 gap-2 bg-slate-950 hover:bg-slate-800">
+              <Button
+                className="h-10 gap-2 bg-slate-950 hover:bg-slate-800"
+                onClick={handleConnectNow}
+                disabled={connecting}
+              >
                 <CalendarPlus className="size-4" />
                 Book Session
               </Button>
@@ -389,6 +393,16 @@ function ReviewList({
                   <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
                     {review.review}
                   </p>
+                )}
+                {review.expertResponse && (
+                  <div className="mt-2 rounded-md border border-blue-200 bg-blue-50/50 p-3">
+                    <p className="text-xs font-medium text-blue-700">
+                      Expert response{review.expertRespondedAt
+                        ? ` (${new Date(review.expertRespondedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })})`
+                        : ""}:
+                    </p>
+                    <p className="mt-1 text-sm text-slate-700">{review.expertResponse}</p>
+                  </div>
                 )}
                 {review.createdAt && (
                   <p className="mt-2 text-xs text-slate-400">

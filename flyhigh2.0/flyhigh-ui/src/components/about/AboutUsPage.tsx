@@ -1,4 +1,5 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { ArrowRight, Check, Plane, Star } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -9,12 +10,15 @@ import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
 import { Reveal } from "@/components/home/Reveal"
 import { SectionLabel } from "@/components/home/SectionLabel"
+import { useAuth } from "@/contexts/AuthContext"
+import { fetchHomePageStats } from "@/lib/public-stats"
+import type { HomePageStats } from "@/types/public-stats"
 
 /* ─── Data ─── */
 const storyParagraphs = [
   {
     title: "Our Genesis",
-    desc: "FlyHigh is an Online Technical Solutions platform dedicated to resolving any kind of technical challenges faced by users. Born from Trinade AI Technologies Pvt Ltd in 2022, we've been revolutionizing the way technical support is delivered across the globe.",
+    desc: "FlyHigh is an Online Technical Solutions platform dedicated to resolving any kind of technical challenges faced by users. Born from Trinade AI Technologies Pvt Ltd (incorporated December 2020 in Guntur, Andhra Pradesh), FlyHigh launched in 2025 to revolutionize how technical support is delivered across India.",
   },
   {
     title: "Comprehensive Support",
@@ -31,17 +35,20 @@ const storyParagraphs = [
 ]
 
 const milestones = [
-  { year: "2022", label: "Founded", desc: "FlyHigh launched by Trinade AI Technologies" },
-  { year: "2023", label: "1,000 Experts", desc: "Crossed 1,000 verified experts on platform" },
-  { year: "2024", label: "Global Expansion", desc: "Expanded to 15+ countries worldwide" },
-  { year: "2025+", label: "AI Integration", desc: "AI-powered expert matching & insights" },
+  { year: "2020", label: "Founded", desc: "Trinade AI Technologies incorporated in Guntur, Andhra Pradesh" },
+  { year: "2022–24", label: "R&D Phase", desc: "Built core AI capabilities and real-time collaboration technology" },
+  { year: "2025", label: "FlyHigh Launch", desc: "FlyHigh platform launched — connecting verified experts with users across India" },
+  { year: "2025+", label: "Scaling Up", desc: "Growing platform with AI-powered expert matching & insights" },
 ]
 
 const teamMembers = [
-  { name: "Dr. Ananya Sharma", role: "CEO & Co-Founder", initials: "AS" },
-  { name: "Rahul Mehta", role: "CTO & Co-Founder", initials: "RM" },
-  { name: "Priya Kapoor", role: "VP of Engineering", initials: "PK" },
-  { name: "Arjun Verma", role: "Head of Product", initials: "AV" },
+  { name: "Peter", role: "Founder / CMD & CEO", initials: "PE" },
+  { name: "Nalini Devi Sale", role: "Director", initials: "NS" },
+  { name: "George Gideon", role: "Product & Strategy Lead", initials: "GG" },
+  { name: "Renu Kumari", role: "Scrum Master / QA Project Manager", initials: "RK" },
+  { name: "Havilah Sale", role: "Business Intelligence Analyst", initials: "HS" },
+  { name: "Shubham Sakhare", role: "AI & Full Stack Developer", initials: "SS" },
+  { name: "Akash Sakhare", role: "Software Developer", initials: "AS" },
 ]
 
 /* ─── Inline SVG Icons ─── */
@@ -109,7 +116,28 @@ function FacebookIcon({ className }: { className?: string }) {
 
 /* ─── Page Component ─── */
 export default function AboutUsPage() {
-  useEffect(() => window.scrollTo(0, 0), [])
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const [stats, setStats] = useState<HomePageStats | null>(null)
+
+  useEffect(() => { window.scrollTo(0, 0) }, [])
+
+  useEffect(() => {
+    fetchHomePageStats().then(setStats).catch(() => {})
+  }, [])
+
+  const expertCount = stats?.verifiedExperts
+    ? stats.verifiedExperts >= 1000
+      ? `${(stats.verifiedExperts / 1000).toFixed(1).replace(/\.0$/, "")}K+`
+      : `${stats.verifiedExperts}+`
+    : "5,000+"
+  const ratingDisplay = stats?.averageRating
+    ? `${(stats.averageRating * 100 / 5).toFixed(0)}%`
+    : "98%"
+
+  const handleGetStarted = () => navigate(user ? "/search-experts" : "/signup")
+  const handleContactUs = () => navigate("/contact")
+  const handleJoinToday = () => navigate(user ? "/search-experts" : "/signup")
 
   return (
     <div className="min-h-svh bg-white">
@@ -157,6 +185,7 @@ export default function AboutUsPage() {
           <div className="hero-reveal hero-reveal-delay-5 mt-8 flex flex-wrap justify-center gap-3">
             <Button
               size="lg"
+              onClick={handleGetStarted}
               className="h-12 gap-2 bg-[var(--flyhigh-primary)] px-7 text-base shadow-lg shadow-indigo-500/25 hover:bg-[var(--flyhigh-primary-hover)]"
             >
               Get Started
@@ -165,6 +194,7 @@ export default function AboutUsPage() {
             <Button
               size="lg"
               variant="outline"
+              onClick={handleContactUs}
               className="h-12 border-slate-300 px-7 text-base text-slate-700 hover:bg-slate-50"
             >
               Contact Us
@@ -174,8 +204,8 @@ export default function AboutUsPage() {
           {/* Stats Row */}
           <div className="hero-reveal hero-reveal-delay-6 mt-10 grid grid-cols-3 divide-x divide-slate-200 rounded-2xl border border-slate-200 bg-white/70 px-4 py-5 shadow-sm backdrop-blur-sm md:mx-auto md:max-w-lg">
             {[
-              { val: "5,000+", label: "Experts" },
-              { val: "98%", label: "Satisfaction" },
+              { val: expertCount, label: "Experts" },
+              { val: ratingDisplay, label: "Satisfaction" },
               { val: "24/7", label: "Support" },
             ].map((stat) => (
               <div key={stat.label} className="flex flex-col items-center px-2 text-center">
@@ -342,8 +372,13 @@ export default function AboutUsPage() {
       {/* ═══════════════════════════════════ */}
       {/* MILESTONE TIMELINE */}
       {/* ═══════════════════════════════════ */}
-      <section className="bg-white py-16 md:py-24">
-        <div className="mx-auto max-w-6xl px-4 md:px-6">
+      <section className="relative overflow-hidden bg-white py-16 md:py-24">
+        {/* Subtle background pattern */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.03]">
+          <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, #4f46e5 1px, transparent 0)", backgroundSize: "40px 40px" }} />
+        </div>
+
+        <div className="relative mx-auto max-w-4xl px-4 md:px-6">
           <Reveal className="mx-auto max-w-2xl text-center">
             <SectionLabel>Our Journey</SectionLabel>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-[var(--flyhigh-text)] md:text-4xl">
@@ -354,26 +389,120 @@ export default function AboutUsPage() {
             </p>
           </Reveal>
 
-          <div className="relative mt-14 grid gap-8 md:grid-cols-4">
-            {/* Vertical line */}
-            <div className="absolute left-6 top-0 hidden h-full w-px bg-gradient-to-b from-indigo-300 via-purple-300 to-blue-300 md:block" />
+          {/* ── Vertical Timeline ── */}
+          <div className="relative mt-16">
+            {/* Central timeline spine */}
+            <div
+              aria-hidden="true"
+              className="absolute left-4 top-0 hidden h-full w-0.5 bg-gradient-to-b from-indigo-400 via-purple-400 to-blue-400 md:block md:left-1/2 md:-translate-x-px"
+            />
 
-            {milestones.map((m, i) => (
-              <Reveal key={m.year} delay={i * 100}>
-                <div className="group relative pl-14 md:pl-0 md:text-center">
-                  {/* Dot */}
-                  <div className="absolute left-4 top-1 hidden size-3 rounded-full border-2 border-indigo-400 bg-white shadow-sm md:block md:left-1/2 md:-translate-x-1/2" />
+            <div className="space-y-12 md:space-y-16">
+              {[
+                {
+                  year: "2020",
+                  title: "Founded",
+                  desc: "Trinade AI Technologies incorporated in Guntur, Andhra Pradesh — laying the foundation for intelligent technical solutions.",
+                  icon: (
+                    <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
+                    </svg>
+                  ),
+                  gradient: "from-indigo-500 to-purple-600",
+                  accent: "indigo",
+                },
+                {
+                  year: "2022–24",
+                  title: "R&D Phase",
+                  desc: "Built core AI capabilities and real-time collaboration technology — years of intensive research and development.",
+                  icon: (
+                    <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                  ),
+                  gradient: "from-amber-500 to-orange-600",
+                  accent: "amber",
+                },
+                {
+                  year: "2025",
+                  title: "FlyHigh Launch",
+                  desc: "FlyHigh platform launched — connecting verified experts with users across India through secure video consultations.",
+                  icon: (
+                    <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                    </svg>
+                  ),
+                  gradient: "from-emerald-500 to-teal-600",
+                  accent: "emerald",
+                },
+                {
+                  year: "2025+",
+                  title: "Scaling Up",
+                  desc: "Growing the platform with AI-powered expert matching, intelligent insights, and an expanding network of verified professionals.",
+                  icon: (
+                    <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                    </svg>
+                  ),
+                  gradient: "from-violet-500 to-fuchsia-600",
+                  accent: "violet",
+                },
+              ].map((milestone, i) => {
+                const isLeft = i % 2 === 0
+                // Static class resolution for Tailwind JIT
+                const accentColorMap: Record<string, { text: string; shadow: string }> = {
+                  indigo: { text: "text-indigo-600", shadow: "shadow-indigo-500/25" },
+                  amber: { text: "text-amber-600", shadow: "shadow-amber-500/25" },
+                  emerald: { text: "text-emerald-600", shadow: "shadow-emerald-500/25" },
+                  violet: { text: "text-violet-600", shadow: "shadow-violet-500/25" },
+                }
+                const accent = accentColorMap[milestone.accent]
+                return (
+                  <Reveal key={milestone.year} delay={i * 120} direction={isLeft ? "left" : "right"}>
+                    <div className={`relative flex items-center md:gap-0 ${isLeft ? "md:flex-row" : "md:flex-row-reverse"}`}>
+                      {/* Content card */}
+                      <div className={`ml-12 flex-1 md:ml-0 ${isLeft ? "md:pr-16 md:text-right" : "md:pl-16 md:text-left"}`}>
+                        <div className={`group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${isLeft ? "md:rounded-r-none" : "md:rounded-l-none"}`}>
+                          {/* Gradient accent stripe */}
+                          <div
+                            aria-hidden="true"
+                            className={`absolute top-0 ${isLeft ? "right-0 rounded-r-2xl" : "left-0 rounded-l-2xl"} h-full w-1 bg-gradient-to-b ${milestone.gradient}`}
+                          />
+                          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1">
+                            <span className={`text-xs font-bold tracking-wider ${accent.text}`}>
+                              {milestone.year}
+                            </span>
+                          </div>
+                          <h3 className="text-xl font-bold text-[var(--flyhigh-text)]">
+                            {milestone.title}
+                          </h3>
+                          <p className="mt-2 text-sm leading-relaxed text-body">
+                            {milestone.desc}
+                          </p>
+                        </div>
+                      </div>
 
-                  <span className="inline-block rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-sm font-bold text-[var(--flyhigh-primary)]">
-                    {m.year}
-                  </span>
-                  <h4 className="mt-3 text-lg font-bold text-[var(--flyhigh-text)]">
-                    {m.label}
-                  </h4>
-                  <p className="mt-1 text-sm text-body">{m.desc}</p>
-                </div>
-              </Reveal>
-            ))}
+                      {/* Timeline node (center) */}
+                      <div className="absolute left-4 top-6 z-10 md:static md:top-auto">
+                        <div className={`flex size-10 items-center justify-center rounded-full bg-gradient-to-br ${milestone.gradient} text-white shadow-lg ${accent.shadow} ring-4 ring-white`}>
+                          {milestone.icon}
+                        </div>
+                      </div>
+
+                      {/* Spacer for the other side */}
+                      <div className="hidden flex-1 md:block" />
+                    </div>
+                  </Reveal>
+                )
+              })}
+            </div>
+
+            {/* End dot */}
+            <div aria-hidden="true" className="relative mt-8 flex justify-center">
+              <div className="flex size-4 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-blue-500 shadow-md ring-4 ring-white">
+                <div className="size-1.5 rounded-full bg-white" />
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -384,33 +513,104 @@ export default function AboutUsPage() {
       <section className="bg-[var(--flyhigh-section)] py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-4 md:px-6">
           <Reveal className="mx-auto max-w-2xl text-center">
-            <SectionLabel>Leadership</SectionLabel>
+            <SectionLabel>Our Team</SectionLabel>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-[var(--flyhigh-text)] md:text-4xl">
-              Meet Our Team
+              The People Behind the Intelligence
             </h2>
             <p className="mt-4 text-body">
-              The people behind FlyHigh&apos;s vision and execution.
+              Engineers, researchers, designers, and strategists — united by a
+              shared obsession with building AI that works in the real world.
             </p>
           </Reveal>
 
-          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {teamMembers.map((member, i) => (
-              <Reveal key={member.name} delay={i * 100}>
-                <Card className="h-full border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:border-indigo-200 hover:shadow-lg">
-                  <CardContent className="flex flex-col items-center p-6 text-center">
-                    <Avatar size="lg" className="size-16">
-                      <AvatarFallback className="bg-gradient-to-br from-[var(--flyhigh-primary)] to-[var(--flyhigh-primary-hover)] text-lg font-bold text-white">
+          {/* ── Featured Leaders Row ── */}
+          <div className="mt-14 grid gap-6 md:grid-cols-2">
+            {/* Peter — Founder / CMD & CEO */}
+            <Reveal direction="left">
+              <div className="group relative overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-br from-white via-indigo-50/40 to-purple-50/40 p-8 shadow-lg shadow-indigo-500/5 transition-all duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-500/10">
+                {/* Decorative corner gradient */}
+                <div aria-hidden="true" className="pointer-events-none absolute -top-20 -right-20 size-48 rounded-full bg-gradient-to-br from-indigo-400/15 to-purple-500/15 blur-2xl" />
+                <div aria-hidden="true" className="pointer-events-none absolute -bottom-16 -left-16 size-40 rounded-full bg-gradient-to-tr from-blue-400/10 to-cyan-400/10 blur-2xl" />
+                <div className="relative flex flex-col sm:flex-row sm:items-center gap-6">
+                  <div className="relative shrink-0">
+                    <div aria-hidden="true" className="absolute -inset-2 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 blur-md opacity-40" />
+                    <Avatar size="lg" className="relative size-20 ring-4 ring-white/80">
+                      <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-2xl font-bold text-white">
+                        PE
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="mb-1 inline-flex rounded-full bg-gradient-to-r from-indigo-500/10 to-purple-500/10 px-3 py-0.5">
+                      <span className="text-xs font-semibold tracking-wide text-indigo-600">Founder / CMD & CEO</span>
+                    </div>
+                    <h3 className="mt-1 text-2xl font-bold text-[var(--flyhigh-text)]">Peter</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-body">
+                      Builds responsibly — combining human judgment with intelligent systems to drive the company&apos;s vision forward.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+
+            {/* Nalini Devi Sale — Director */}
+            <Reveal direction="right">
+              <div className="group relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-white via-emerald-50/40 to-teal-50/40 p-8 shadow-lg shadow-emerald-500/5 transition-all duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/10">
+                <div aria-hidden="true" className="pointer-events-none absolute -top-20 -right-20 size-48 rounded-full bg-gradient-to-br from-emerald-400/15 to-teal-500/15 blur-2xl" />
+                <div aria-hidden="true" className="pointer-events-none absolute -bottom-16 -left-16 size-40 rounded-full bg-gradient-to-tr from-green-400/10 to-emerald-400/10 blur-2xl" />
+                <div className="relative flex flex-col sm:flex-row sm:items-center gap-6">
+                  <div className="relative shrink-0">
+                    <div aria-hidden="true" className="absolute -inset-2 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 blur-md opacity-40" />
+                    <Avatar size="lg" className="relative size-20 ring-4 ring-white/80">
+                      <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-2xl font-bold text-white">
+                        NS
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="mb-1 inline-flex rounded-full bg-gradient-to-r from-emerald-500/10 to-teal-500/10 px-3 py-0.5">
+                      <span className="text-xs font-semibold tracking-wide text-emerald-600">Director</span>
+                    </div>
+                    <h3 className="mt-1 text-2xl font-bold text-[var(--flyhigh-text)]">Nalini Devi Sale</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-body">
+                      Guides the company with clarity, governance, and lasting purpose — ensuring every decision aligns with our mission.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+
+          {/* ── Team Grid ── */}
+          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            {[
+              { name: "George Gideon", role: "Product & Strategy Lead", initials: "GG", gradient: "from-amber-500 to-orange-600", roleColor: "text-amber-600", badgeBg: "bg-amber-50", desc: "Shapes clear roadmaps and turns ideas into launch-ready products." },
+              { name: "Renu Kumari", role: "Scrum Master / QA PM", initials: "RK", gradient: "from-rose-500 to-pink-600", roleColor: "text-rose-600", badgeBg: "bg-rose-50", desc: "Leads delivery and quality with strong execution discipline." },
+              { name: "Havilah Sale", role: "Business Intelligence", initials: "HS", gradient: "from-sky-500 to-blue-600", roleColor: "text-sky-600", badgeBg: "bg-sky-50", desc: "Converts data into dashboards, decisions, and measurable impact." },
+              { name: "Shubham Sakhare", role: "AI & Full Stack Dev", initials: "SS", gradient: "from-violet-500 to-purple-600", roleColor: "text-violet-600", badgeBg: "bg-violet-50", desc: "Builds AI-enhanced applications that scale cleanly from concept to production." },
+              { name: "Akash Sakhare", role: "Software Developer", initials: "AS", gradient: "from-cyan-500 to-blue-600", roleColor: "text-cyan-600", badgeBg: "bg-cyan-50", desc: "Builds clean, scalable web applications with a user-first mindset." },
+            ].map((member, i) => (
+              <Reveal key={member.name} delay={i * 80}>
+                <div className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-lg">
+                  {/* Top accent bar */}
+                  <div aria-hidden="true" className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${member.gradient}`} />
+                  <div className="flex flex-col items-center text-center pt-3">
+                    <Avatar size="default" className="size-14">
+                      <AvatarFallback className={`bg-gradient-to-br ${member.gradient} text-base font-bold text-white`}>
                         {member.initials}
                       </AvatarFallback>
                     </Avatar>
-                    <h4 className="mt-4 font-bold text-[var(--flyhigh-text)]">
+                    <h4 className="mt-3 font-bold text-[var(--flyhigh-text)] leading-tight">
                       {member.name}
                     </h4>
-                    <p className="mt-1 text-sm font-medium text-slate-500">
+                    <span className={`mt-1 inline-flex items-center rounded-full ${member.badgeBg} px-2.5 py-0.5 text-xs font-semibold tracking-wide ${member.roleColor}`}>
                       {member.role}
+                    </span>
+                    <p className="mt-2 text-xs leading-relaxed text-slate-500 line-clamp-3">
+                      {member.desc}
                     </p>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </Reveal>
             ))}
           </div>
@@ -458,6 +658,7 @@ export default function AboutUsPage() {
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Button
                 size="lg"
+                onClick={handleJoinToday}
                 className="h-12 gap-2 bg-[var(--flyhigh-primary)] px-8 shadow-lg shadow-indigo-500/25 hover:bg-[var(--flyhigh-primary-hover)]"
               >
                 Join FlyHigh Today

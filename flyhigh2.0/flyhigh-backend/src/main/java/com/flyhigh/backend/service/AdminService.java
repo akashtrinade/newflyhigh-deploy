@@ -11,6 +11,7 @@ import com.flyhigh.backend.repository.ExpertProfileRepository;
 import com.flyhigh.backend.repository.InteractionRepository;
 import com.flyhigh.backend.repository.SessionPaymentRepository;
 import com.flyhigh.backend.repository.UserRepository;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -101,43 +102,30 @@ public class AdminService {
                 .collect(Collectors.toList());
     }
 
-    public List<AdminUserDto> getUsers(int page) {
+    public Page<AdminUserDto> getUsers(int page) {
         return userRepository.findAll(PageRequest.of(page, PAGE_SIZE, SORT_BY_DATE))
-                .getContent().stream()
-                .map(this::toUserDto)
-                .collect(Collectors.toList());
+                .map(this::toUserDto);
     }
 
-    public List<AdminUserDto> getClients(int page) {
-        // Filter users by CLIENT role — using findAll and filtering in-memory for simplicity
-        // For production: use a custom query with role filter
-        return userRepository.findAll(PageRequest.of(page, PAGE_SIZE, SORT_BY_DATE))
-                .getContent().stream()
-                .filter(u -> "CLIENT".equalsIgnoreCase(u.getRole()))
-                .map(this::toUserDto)
-                .collect(Collectors.toList());
+    public Page<AdminUserDto> getClients(int page) {
+        // DB-level role filter — avoids sparse pages from in-memory filtering
+        return userRepository.findByRole("CLIENT", PageRequest.of(page, PAGE_SIZE, SORT_BY_DATE))
+                .map(this::toUserDto);
     }
 
-    public List<AdminUserDto> getExperts(int page) {
-        return userRepository.findAll(PageRequest.of(page, PAGE_SIZE, SORT_BY_DATE))
-                .getContent().stream()
-                .filter(u -> "EXPERT".equalsIgnoreCase(u.getRole()))
-                .map(this::toUserDto)
-                .collect(Collectors.toList());
+    public Page<AdminUserDto> getExperts(int page) {
+        return userRepository.findByRole("EXPERT", PageRequest.of(page, PAGE_SIZE, SORT_BY_DATE))
+                .map(this::toUserDto);
     }
 
-    public List<AdminConsultationDto> getConsultations(int page) {
+    public Page<AdminConsultationDto> getConsultations(int page) {
         return interactionRepository.findAll(PageRequest.of(page, PAGE_SIZE, SORT_BY_DATE))
-                .getContent().stream()
-                .map(this::toConsultationDto)
-                .collect(Collectors.toList());
+                .map(this::toConsultationDto);
     }
 
-    public List<AdminPaymentDto> getPayments(int page) {
+    public Page<AdminPaymentDto> getPayments(int page) {
         return sessionPaymentRepository.findAll(PageRequest.of(page, PAGE_SIZE, SORT_BY_DATE))
-                .getContent().stream()
-                .map(this::toPaymentDto)
-                .collect(Collectors.toList());
+                .map(this::toPaymentDto);
     }
 
     // ═══════════════════════════════════════════
@@ -145,7 +133,7 @@ public class AdminService {
     // ═══════════════════════════════════════════
 
     private AdminUserDto toUserDto(User user) {
-        return new AdminUserDto(
+        AdminUserDto dto = new AdminUserDto(
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
@@ -155,6 +143,10 @@ public class AdminService {
                 user.getIsAdmin(),
                 user.getCreatedAt()
         );
+        // Split names — the admin UI renders firstName/lastName columns
+        dto.setFirstName(user.getFirstName());
+        dto.setLastName(user.getLastName());
+        return dto;
     }
 
     private AdminConsultationDto toConsultationDto(Interaction interaction) {

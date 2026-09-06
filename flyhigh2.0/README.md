@@ -2,6 +2,14 @@
 
 A full-stack marketplace connecting clients with expert professionals across categories (legal, finance, tech, health, business) via WebRTC video calls. Think "Uber for expert consultations."
 
+## Recent Changes (Aug 17, 2026)
+
+- Ownership checks on all payment/session endpoints; payments bound to the session's own order; no more captured-but-dead payment states (expiry-safe verify + webhook applies extensions).
+- In-app notifications now actually written by the backend (call requests, responses, payments).
+- UI: mid-call token refresh, extension retry verification, working feedback flow, call-room rejoin on reconnect, peer-disconnect banner.
+- Admin: no default credentials; admin tables show real data (page-shaped API).
+- Legal pages live at `/terms` and `/privacy`; search price (₹) and rating filters work.
+
 [![Deploy](https://github.com/akshay/flyhigh/actions/workflows/deploy.yml/badge.svg)](https://github.com/akshay/flyhigh/actions/workflows/deploy.yml)
 
 ---

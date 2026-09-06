@@ -1,12 +1,28 @@
 import { ArrowRight, Check, Plane } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/contexts/AuthContext"
 
 import { Reveal } from "./Reveal"
 
 const trustItems = ["Free to Join", "Pay Per Call", "Verified Experts"] as const
 
 export function FinalCtaSection() {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+
+  const handleFindExpert = () => {
+    if (user) {
+      navigate("/search-experts")
+    } else {
+      navigate("/login")
+    }
+  }
+
+  const handleCreateAccount = () => {
+    navigate("/signup")
+  }
   return (
     <section
       className="relative overflow-hidden bg-[var(--flyhigh-section)] py-20 md:py-28"
@@ -39,6 +55,7 @@ export function FinalCtaSection() {
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button
               size="lg"
+              onClick={handleFindExpert}
               className="h-12 gap-2 bg-[var(--flyhigh-primary)] px-8 shadow-lg shadow-indigo-500/25 hover:bg-[var(--flyhigh-primary-hover)]"
             >
               Find an Expert
@@ -47,6 +64,7 @@ export function FinalCtaSection() {
             <Button
               size="lg"
               variant="outline"
+              onClick={handleCreateAccount}
               className="h-12 border-slate-300 px-8 text-slate-700 hover:bg-white"
             >
               Create Account

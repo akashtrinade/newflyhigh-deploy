@@ -42,10 +42,13 @@ export interface ExpertSearchParams {
 }
 
 export interface ExpertReview {
+  callRequestId?: string | null
   clientName: string
   rating: number
   review: string
   createdAt: string
+  expertResponse?: string | null
+  expertRespondedAt?: string | null
 }
 
 export interface ExpertPublicProfile {
@@ -110,4 +113,9 @@ export interface CallHistoryItem {
   rating?: number | null
   review?: string | null
   topic?: string | null
+  interactionId?: string | null
+  totalPaidAmount?: number | null
+  expertAmount?: number | null
+  paymentStatus?: string | null
+  durationMinutes?: number | null
 }

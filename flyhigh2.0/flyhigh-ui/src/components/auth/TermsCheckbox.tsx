@@ -21,7 +21,7 @@ export default function TermsCheckbox({ checked, onChange, error }: TermsCheckbo
         <span className="text-xs text-[var(--flyhigh-text-muted)] leading-relaxed select-none">
           I agree to the{" "}
           <a
-            href="#"
+            href="/terms"
             target="_blank"
             rel="noopener noreferrer"
             className="font-semibold text-[#2563EB] hover:text-[#1d4ed8] underline underline-offset-2"
@@ -31,7 +31,7 @@ export default function TermsCheckbox({ checked, onChange, error }: TermsCheckbo
           </a>{" "}
           and{" "}
           <a
-            href="#"
+            href="/privacy"
             target="_blank"
             rel="noopener noreferrer"
             className="font-semibold text-[#2563EB] hover:text-[#1d4ed8] underline underline-offset-2"

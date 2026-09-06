@@ -1,206 +1,184 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import {
   ArrowRight,
-  Check,
-  Search,
-  Calendar,
-  Video,
-  User,
-  Lock,
+  CheckCircle,
   Clock,
-  CreditCard,
-  Star,
+  DollarSign,
+  Edit3,
+  Heart,
   MessageSquare,
   Shield,
-  Zap,
+  Sparkles,
+  Star,
+  UserPlus,
   Users,
-  Globe,
+  Video,
+  Zap,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
 import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
 import { Reveal } from "@/components/home/Reveal"
 import { SectionLabel } from "@/components/home/SectionLabel"
+import { useAuth } from "@/contexts/AuthContext"
+import { fetchHomePageStats } from "@/lib/public-stats"
+import type { HomePageStats } from "@/types/public-stats"
 
 /* ─── Data ─── */
 
-type Feature = {
-  icon: typeof Search
+type CustomerStep = {
+  number: string
+  icon: typeof UserPlus
   title: string
   description: string
-  color: string
-  bgColor: string
+  gradient: string
+  iconColor: string
+  iconBg: string
+  nodeColor: string
+  barColor: string
 }
 
-const coreFeatures: Feature[] = [
+const customerSteps: CustomerStep[] = [
   {
-    icon: User,
-    title: "Smart Account Management",
+    number: "01",
+    icon: UserPlus,
+    title: "Register",
     description:
-      "Seamless account creation, login, and signup for both Experts and End-users with intelligent profile management.",
-    color: "text-indigo-600",
-    bgColor: "bg-indigo-100",
+      "Register FlyHigh as a Customer to unlock access to our trusted network.",
+    gradient: "from-indigo-500 to-purple-600",
+    iconColor: "text-indigo-600",
+    iconBg: "bg-indigo-100",
+    nodeColor: "border-indigo-400",
+    barColor: "bg-indigo-400",
   },
   {
-    icon: Lock,
-    title: "Expert Privacy Protection",
+    number: "02",
+    icon: Edit3,
+    title: "Describe",
     description:
-      "Technical experts create profiles that remain securely hidden from End-users until connection is established.",
-    color: "text-purple-600",
-    bgColor: "bg-purple-100",
+      "Tell us what you need in a few lines. No forms, no friction — just your situation.",
+    gradient: "from-emerald-500 to-teal-600",
+    iconColor: "text-emerald-600",
+    iconBg: "bg-emerald-100",
+    nodeColor: "border-emerald-400",
+    barColor: "bg-emerald-400",
   },
   {
-    icon: Search,
-    title: "Advanced Expert Search",
+    number: "03",
+    icon: Sparkles,
+    title: "Match",
     description:
-      "Intelligently categorized search system to find the perfect technical experts for your specific needs.",
-    color: "text-blue-600",
-    bgColor: "bg-blue-100",
+      "Our system matches you with a verified expert in the relevant field. Credentials checked, quality assured.",
+    gradient: "from-amber-500 to-orange-600",
+    iconColor: "text-amber-600",
+    iconBg: "bg-amber-100",
+    nodeColor: "border-amber-400",
+    barColor: "bg-amber-400",
   },
   {
-    icon: Zap,
-    title: "Lightning Fast Resolution",
-    description:
-      "Connect with experts instantly and get most technical issues resolved within 24 hours.",
-    color: "text-amber-600",
-    bgColor: "bg-amber-100",
-  },
-  {
-    icon: CreditCard,
-    title: "Secure Payment Integration",
-    description:
-      "End-to-end encrypted payments via Razorpay, ensuring smooth and secure financial transactions.",
-    color: "text-emerald-600",
-    bgColor: "bg-emerald-100",
-  },
-  {
-    icon: Star,
-    title: "Rating & Review System",
-    description:
-      "Comprehensive feedback system allowing both users and experts to leave ratings and detailed reviews.",
-    color: "text-rose-600",
-    bgColor: "bg-rose-100",
-  },
-  {
-    icon: MessageSquare,
-    title: "Advanced Communication",
-    description:
-      "Chat, voice, and video call support with one week of secure, monitored data storage.",
-    color: "text-cyan-600",
-    bgColor: "bg-cyan-100",
-  },
-]
-
-const steps = [
-  {
-    step: 1,
-    icon: Search,
-    title: "Find Expert",
-    description:
-      "Browse verified experts by category, rating, and availability.",
-    color: "from-indigo-500 to-purple-600",
-    lightBg: "bg-indigo-50",
-    borderColor: "border-indigo-200",
-  },
-  {
-    step: 2,
-    icon: Calendar,
-    title: "Book Consultation",
-    description:
-      "Choose a time slot and pay securely — no subscription required.",
-    color: "from-emerald-500 to-teal-600",
-    lightBg: "bg-emerald-50",
-    borderColor: "border-emerald-200",
-  },
-  {
-    step: 3,
+    number: "04",
     icon: Video,
-    title: "Video Call & Resolution",
+    title: "Connect",
     description:
-      "Connect via HD video, get expert advice, and resolve your issue.",
-    color: "from-blue-500 to-cyan-600",
-    lightBg: "bg-blue-50",
-    borderColor: "border-blue-200",
+      "Start a session — chat, voice, or video. Whatever feels right for the conversation.",
+    gradient: "from-blue-500 to-cyan-600",
+    iconColor: "text-blue-600",
+    iconBg: "bg-blue-100",
+    nodeColor: "border-blue-400",
+    barColor: "bg-blue-400",
+  },
+  {
+    number: "05",
+    icon: CheckCircle,
+    title: "Act",
+    description:
+      "Walk away with clear next steps you can act on immediately. Rate and improve future matches.",
+    gradient: "from-violet-500 to-purple-600",
+    iconColor: "text-violet-600",
+    iconBg: "bg-violet-100",
+    nodeColor: "border-violet-400",
+    barColor: "bg-violet-400",
   },
 ]
 
-const stats = [
-  { number: "24/7", label: "Support Available", icon: Clock },
-  { number: "5,000+", label: "Active Experts", icon: Users },
-  { number: "98%", label: "Satisfaction Rate", icon: Star },
-  { number: "<24h", label: "Avg. Resolution", icon: Zap },
-]
+type ExpertStep = {
+  number: string
+  icon: typeof UserPlus
+  title: string
+  description: string
+  gradient: string
+}
 
-const workflowSteps = [
+const expertSteps: ExpertStep[] = [
   {
-    step: 1,
-    title: "User Submits Query",
+    number: "01",
+    icon: UserPlus,
+    title: "Register",
     description:
-      "Users submit technical queries through our intuitive platform interface. Our AI-powered system analyzes the request and categorizes it for optimal expert matching.",
-    icon: MessageSquare,
-    color: "text-indigo-600",
-    bgColor: "bg-indigo-100",
+      "Register FlyHigh as an expert to start sharing your professional knowledge.",
+    gradient: "from-indigo-500 to-purple-600",
   },
   {
-    step: 2,
-    title: "AI Matches Expert",
+    number: "02",
+    icon: Shield,
+    title: "Get Verified",
     description:
-      "Our intelligent matching engine connects your query with the most qualified technical experts from our verified pool of 5,000+ professionals across all domains.",
-    icon: Zap,
-    color: "text-purple-600",
-    bgColor: "bg-purple-100",
+      "Build your professional profile with verified credentials in your field.",
+    gradient: "from-emerald-500 to-teal-600",
   },
   {
-    step: 3,
-    title: "Expert Reviews & Connects",
+    number: "03",
+    icon: Heart,
+    title: "Help Real People",
     description:
-      "The matched expert reviews your requirements, and once accepted, a secure connection is established. Expert profiles remain hidden until this point for privacy.",
-    icon: Lock,
-    color: "text-amber-600",
-    bgColor: "bg-amber-100",
+      "Support individuals facing real problems with real deadlines.",
+    gradient: "from-rose-500 to-pink-600",
   },
   {
-    step: 4,
-    title: "Real-Time Collaboration",
+    number: "04",
+    icon: DollarSign,
+    title: "Earn On Your Terms",
     description:
-      "Engage in interactive video conferencing, chat, or voice calls with your expert. TRINADE manages the entire workflow ensuring smooth communication.",
-    icon: Video,
-    color: "text-emerald-600",
-    bgColor: "bg-emerald-100",
+      "Monetize your expertise professionally — set your own availability.",
+    gradient: "from-amber-500 to-orange-600",
   },
-  {
-    step: 5,
-    title: "Secure Payment & Resolution",
-    description:
-      "Transparent pricing based on issue complexity. Payments are processed securely via Razorpay. Most issues are resolved within 24 hours.",
-    icon: CreditCard,
-    color: "text-blue-600",
-    bgColor: "bg-blue-100",
-  },
-  {
-    step: 6,
-    title: "Rate & Review",
-    description:
-      "Both users and experts can leave ratings and detailed reviews. Feedback helps maintain quality and builds trust within the FlyHigh community.",
-    icon: Star,
-    color: "text-rose-600",
-    bgColor: "bg-rose-100",
-  },
-]
-
-const guarantees = [
-  { text: "30-day money-back guarantee", icon: Shield },
-  { text: "24/7 customer support", icon: Clock },
-  { text: "No hidden fees", icon: CreditCard },
-  { text: "Enterprise-ready", icon: Globe },
 ]
 
 /* ─── Component ─── */
+
 export default function HowItWorksPage() {
-  useEffect(() => window.scrollTo(0, 0), [])
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const [stats, setStats] = useState<HomePageStats | null>(null)
+
+  useEffect(() => { window.scrollTo(0, 0) }, [])
+
+  useEffect(() => {
+    fetchHomePageStats().then(setStats).catch(() => {})
+  }, [])
+
+  const expertCountFormatted = stats?.verifiedExperts
+    ? stats.verifiedExperts >= 1000
+      ? `${(stats.verifiedExperts / 1000).toFixed(1).replace(/\.0$/, "")}K+`
+      : `${stats.verifiedExperts}+`
+    : "5,000+"
+  const satisfactionRate = stats?.averageRating
+    ? `${(stats.averageRating * 100 / 5).toFixed(0)}%`
+    : "98%"
+
+  const statsDisplay = [
+    { number: "24/7", label: "Support Available", icon: Clock },
+    { number: expertCountFormatted, label: "Active Experts", icon: Users },
+    { number: satisfactionRate, label: "Satisfaction Rate", icon: Star },
+    { number: "<24h", label: "Avg. Resolution", icon: Zap },
+  ]
+
+  const handleFindExpert = () => navigate(user ? "/search-experts" : "/login")
+  const handleBecomeExpert = () => navigate(user ? "/expert/profile" : "/signup?role=expert")
+  const handleGetStarted = () => navigate(user ? "/search-experts" : "/signup")
 
   return (
     <div className="min-h-svh bg-white">
@@ -231,22 +209,22 @@ export default function HowItWorksPage() {
 
           <h1 className="font-heading text-4xl leading-[1.08] font-bold tracking-tight text-[var(--flyhigh-text)] sm:text-5xl md:text-[3.25rem] lg:text-[3.75rem]">
             <span className="hero-reveal hero-reveal-delay-2 block">
-              From Query to Solution
+              From Question to Clarity
             </span>
             <span className="hero-reveal hero-reveal-delay-3 block text-gradient-brand">
-              In Three Simple Steps.
+              In Five Simple Steps.
             </span>
           </h1>
 
           <p className="hero-reveal hero-reveal-delay-4 mx-auto mt-6 max-w-2xl text-base leading-relaxed text-body md:text-lg">
-            FlyHigh Platform serves as an intelligent bridge between technical
-            experts and end-users. TRINADE manages the entire workflow, from
-            initial connection to secure payments.
+            FlyHigh connects you with verified experts through a seamless,
+            secure process. No subscriptions, no hidden fees — just real help
+            when you need it.
           </p>
 
           {/* Stats row */}
           <div className="hero-reveal hero-reveal-delay-5 mt-10 grid grid-cols-2 divide-x divide-slate-200 rounded-2xl border border-slate-200 bg-white/70 px-4 py-4 shadow-sm backdrop-blur-sm md:mx-auto md:max-w-2xl md:grid-cols-4">
-            {stats.map((stat) => {
+            {statsDisplay.map((stat) => {
               const Icon = stat.icon
               return (
                 <div
@@ -268,6 +246,7 @@ export default function HowItWorksPage() {
           <div className="hero-reveal hero-reveal-delay-6 mt-8 flex flex-wrap justify-center gap-3">
             <Button
               size="lg"
+              onClick={handleFindExpert}
               className="h-12 gap-2 bg-[var(--flyhigh-primary)] px-7 text-base shadow-lg shadow-indigo-500/25 hover:bg-[var(--flyhigh-primary-hover)]"
             >
               Find an Expert
@@ -276,6 +255,7 @@ export default function HowItWorksPage() {
             <Button
               size="lg"
               variant="outline"
+              onClick={handleBecomeExpert}
               className="h-12 border-slate-300 px-7 text-base text-slate-700 hover:bg-slate-50"
             >
               Become an Expert
@@ -285,311 +265,204 @@ export default function HowItWorksPage() {
       </section>
 
       {/* ═══════════════════════════════════ */}
-      {/* 3 SIMPLE STEPS (Visual Flow) */}
-      {/* ═══════════════════════════════════ */}
-      <section className="bg-white pb-16 md:pb-24">
-        <div className="mx-auto max-w-6xl px-4 md:px-6">
-          <Reveal className="mx-auto max-w-2xl text-center">
-            <SectionLabel>Simple Process</SectionLabel>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-[var(--flyhigh-text)] md:text-4xl">
-              3 Steps to Your Expert Session
-            </h2>
-            <p className="mt-4 text-body">
-              Get expert help in three simple steps — no subscriptions, no
-              hassle.
-            </p>
-          </Reveal>
-
-          <div className="relative mt-14 grid gap-8 md:grid-cols-3">
-            {/* Connecting line */}
-            <div
-              aria-hidden="true"
-              className="absolute top-12 left-[15%] hidden h-px w-[70%] bg-gradient-to-r from-indigo-300 via-purple-300 to-blue-300 md:block"
-            />
-
-            {steps.map((step, index) => {
-              const Icon = step.icon
-              return (
-                <Reveal key={step.step} delay={index * 120}>
-                  <div className="relative flex flex-col items-center text-center">
-                    {/* Step circle */}
-                    <div
-                      className={`relative mb-6 flex size-24 items-center justify-center rounded-2xl border-2 ${step.borderColor} ${step.lightBg} shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1`}
-                    >
-                      <span
-                        className={`absolute -top-3 -right-3 flex size-7 items-center justify-center rounded-full bg-gradient-to-r ${step.color} text-[10px] font-bold text-white shadow-md`}
-                      >
-                        0{step.step}
-                      </span>
-                      <Icon
-                        className="size-10 text-[var(--flyhigh-primary)]"
-                        aria-hidden="true"
-                      />
-                    </div>
-
-                    <h3 className="text-xl font-bold text-[var(--flyhigh-text)]">
-                      {step.title}
-                    </h3>
-                    <p className="mt-2 max-w-xs text-sm leading-relaxed text-body">
-                      {step.description}
-                    </p>
-
-                    {index < steps.length - 1 && (
-                      <div
-                        aria-hidden="true"
-                        className="absolute top-10 -right-4 hidden md:block"
-                      >
-                        <ArrowRight className="size-6 text-indigo-300" />
-                      </div>
-                    )}
-                  </div>
-                </Reveal>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════ */}
-      {/* PLATFORM OVERVIEW */}
-      {/* ═══════════════════════════════════ */}
-      <section className="bg-[var(--flyhigh-section)] py-16 md:py-24">
-        <div className="mx-auto max-w-6xl px-4 md:px-6">
-          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-            <Reveal direction="left">
-              <SectionLabel>Platform Overview</SectionLabel>
-              <h2 className="mt-3 text-3xl font-bold tracking-tight text-[var(--flyhigh-text)] md:text-4xl">
-                Your Premier Technical Solution Platform
-              </h2>
-              <p className="mt-4 text-body leading-relaxed">
-                FlyHigh Platform serves as an intelligent bridge between
-                technical experts and end-users. Users can submit technical
-                queries, and our AI-powered system matches them with the most
-                qualified experts. TRINADE manages the entire workflow, from
-                initial connection to secure payments through our transparent
-                pricing model.
-              </p>
-
-              <div className="mt-8 space-y-4">
-                {[
-                  {
-                    icon: Check,
-                    text: "Intelligent AI-powered expert matching",
-                    color: "text-emerald-600",
-                    bg: "bg-emerald-100",
-                  },
-                  {
-                    icon: Check,
-                    text: "End-to-end workflow management by TRINADE",
-                    color: "text-blue-600",
-                    bg: "bg-blue-100",
-                  },
-                  {
-                    icon: Check,
-                    text: "Transparent pricing with no hidden fees",
-                    color: "text-purple-600",
-                    bg: "bg-purple-100",
-                  },
-                ].map((item) => {
-                  const Icon = item.icon
-                  return (
-                    <div key={item.text} className="flex items-center gap-3">
-                      <span
-                        className={`flex size-7 shrink-0 items-center justify-center rounded-full ${item.bg}`}
-                      >
-                        <Icon className={`size-4 ${item.color}`} />
-                      </span>
-                      <span className="font-medium text-[var(--flyhigh-text)]">
-                        {item.text}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-2">
-                <Check className="size-4 text-[var(--flyhigh-primary)]" />
-                <span className="text-sm font-semibold text-[var(--flyhigh-primary)]">
-                  Trusted by 5,000+ Experts & Users Worldwide
-                </span>
-              </div>
-            </Reveal>
-
-            <Reveal direction="right" delay={150}>
-              <div className="relative">
-                {/* Decorative blobs */}
-                <div
-                  aria-hidden="true"
-                  className="absolute -inset-4 rounded-[2.5rem] bg-gradient-to-br from-indigo-300/20 to-purple-200/10 blur-2xl"
-                />
-                <div className="relative grid grid-cols-2 gap-4">
-                  {[
-                    {
-                      icon: Users,
-                      label: "5,000+",
-                      sub: "Active Experts",
-                      gradient: "from-indigo-500 to-purple-600",
-                    },
-                    {
-                      icon: Globe,
-                      label: "15+",
-                      sub: "Countries",
-                      gradient: "from-emerald-500 to-teal-600",
-                    },
-                    {
-                      icon: Star,
-                      label: "98%",
-                      sub: "Satisfaction",
-                      gradient: "from-amber-500 to-orange-600",
-                    },
-                    {
-                      icon: Zap,
-                      label: "50K+",
-                      sub: "Resolved",
-                      gradient: "from-blue-500 to-cyan-600",
-                    },
-                  ].map((item) => {
-                    const Icon = item.icon
-                    return (
-                      <div
-                        key={item.label}
-                        className="flex flex-col items-center rounded-2xl border border-slate-200 bg-white/80 p-6 text-center shadow-sm backdrop-blur-sm transition-all hover:shadow-lg hover:-translate-y-1"
-                      >
-                        <div
-                          className={`flex size-11 items-center justify-center rounded-xl bg-gradient-to-br ${item.gradient} text-white shadow-sm`}
-                        >
-                          <Icon className="size-5" />
-                        </div>
-                        <span className="mt-3 text-xl font-bold text-[var(--flyhigh-text)]">
-                          {item.label}
-                        </span>
-                        <span className="mt-0.5 text-xs font-medium text-slate-500">
-                          {item.sub}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </Reveal>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════ */}
-      {/* DETAILED WORKFLOW */}
+      {/* FOR CUSTOMERS — 5-Step Alternating Timeline */}
       {/* ═══════════════════════════════════ */}
       <section className="bg-white py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-4 md:px-6">
           <Reveal className="mx-auto max-w-2xl text-center">
-            <SectionLabel>Detailed Workflow</SectionLabel>
+            <SectionLabel>For Customers</SectionLabel>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-[var(--flyhigh-text)] md:text-4xl">
-              End-to-End Process
+              From Question to Clarity in Five Steps
             </h2>
             <p className="mt-4 text-body">
-              From submitting your query to getting it resolved — here&apos;s how
-              the entire FlyHigh workflow works.
+              Get expert guidance on your terms — simple, transparent, and
+              designed around your needs.
             </p>
           </Reveal>
 
-          <div className="relative mt-14">
-            {/* Vertical timeline line */}
+          {/* Vertical timeline with alternating cards */}
+          <div className="relative mt-16">
+            {/* Central gradient spine */}
             <div
               aria-hidden="true"
-              className="absolute left-8 top-0 hidden h-full w-px bg-gradient-to-b from-indigo-300 via-purple-300 to-blue-300 md:block"
+              className="absolute left-8 top-0 hidden h-full w-0.5 bg-gradient-to-b from-indigo-400 via-purple-400 to-violet-400 md:left-1/2 md:block md:-translate-x-px"
             />
 
-            <div className="space-y-8">
-              {workflowSteps.map((wf, i) => {
-                const Icon = wf.icon
+            <div className="space-y-12 md:space-y-20">
+              {customerSteps.map((step, i) => {
+                const Icon = step.icon
+                const isLeft = i % 2 === 0
+
                 return (
-                  <Reveal key={wf.step} delay={i * 100}>
-                    <div className="relative group">
-                      {/* Timeline dot */}
+                  <Reveal key={step.number} delay={i * 100}>
+                    <div className="relative flex items-start gap-5 md:gap-0">
+                      {/* Timeline node (desktop only) */}
                       <div
                         aria-hidden="true"
-                        className="absolute left-6 top-8 hidden size-4 rounded-full border-2 border-indigo-400 bg-white shadow-sm md:block"
-                      />
+                        className={`absolute left-8 top-0 z-10 hidden size-14 -translate-x-1/2 items-center justify-center rounded-2xl bg-gradient-to-br ${step.gradient} shadow-lg md:flex md:left-1/2`}
+                      >
+                        <span className="text-sm font-bold text-white">
+                          {step.number}
+                        </span>
+                      </div>
 
-                      <div className="md:pl-20">
-                        <Card
-                          className={`overflow-hidden border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:shadow-lg ${
-                            i % 2 === 0 ? "" : "md:-translate-y-1"
-                          }`}
-                        >
-                          <CardContent className="flex items-start gap-5 p-6 md:p-8">
-                            <div
-                              className={`flex size-12 shrink-0 items-center justify-center rounded-xl ${wf.bgColor} shadow-sm`}
+                      {/* Card — alternates left/right on desktop */}
+                      <div
+                        className={`ml-16 w-full md:ml-0 md:w-[calc(50%-2.75rem)] ${
+                          isLeft ? "md:mr-auto" : "md:ml-auto"
+                        }`}
+                      >
+                        {/* Mobile step number */}
+                        <div className="mb-3 flex items-center gap-3 md:hidden">
+                          <span
+                            className={`inline-flex size-10 items-center justify-center rounded-xl bg-gradient-to-br ${step.gradient} text-sm font-bold text-white shadow-md`}
+                          >
+                            {step.number}
+                          </span>
+                          <span className="text-sm font-semibold tracking-wider text-slate-400 uppercase">
+                            Step {i + 1}
+                          </span>
+                        </div>
+
+                        <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-lg md:p-8">
+                          {/* Top accent bar */}
+                          <div
+                            className={`absolute top-0 left-0 h-1 w-full bg-gradient-to-r ${step.gradient}`}
+                          />
+
+                          {/* Desktop step number badge */}
+                          <div className="mb-4 hidden items-center gap-3 md:flex">
+                            <span
+                              className={`inline-flex size-10 items-center justify-center rounded-xl bg-gradient-to-br ${step.gradient} text-sm font-bold text-white shadow-md`}
                             >
-                              <Icon className={`size-6 ${wf.color}`} />
+                              {step.number}
+                            </span>
+                            <span className="text-xs font-semibold tracking-[0.15em] text-slate-400 uppercase">
+                              Step {i + 1}
+                            </span>
+                          </div>
+
+                          <div className="flex items-start gap-4">
+                            <div
+                              className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${step.iconBg} ${step.iconColor}`}
+                            >
+                              <Icon className="size-5" />
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-3">
-                                <span
-                                  className={`inline-flex size-6 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-[10px] font-bold text-white`}
-                                >
-                                  {wf.step}
-                                </span>
-                                <h3 className="text-lg font-bold text-[var(--flyhigh-text)]">
-                                  {wf.title}
-                                </h3>
-                              </div>
+                            <div>
+                              <h3 className="text-xl font-bold text-[var(--flyhigh-text)]">
+                                {step.title}
+                              </h3>
                               <p className="mt-2 text-sm leading-relaxed text-body">
-                                {wf.description}
+                                {step.description}
                               </p>
                             </div>
-                          </CardContent>
-                        </Card>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </Reveal>
                 )
               })}
             </div>
+
+            {/* End dot */}
+            <div
+              aria-hidden="true"
+              className="absolute -bottom-4 left-8 hidden size-3 -translate-x-1/2 rounded-full border-2 border-violet-300 bg-white md:left-1/2 md:block"
+            />
           </div>
         </div>
       </section>
 
       {/* ═══════════════════════════════════ */}
-      {/* CORE FEATURES (Grid) */}
+      {/* FOR EXPERTS — 4-Step Grid */}
       {/* ═══════════════════════════════════ */}
-      <section className="bg-[var(--flyhigh-section)] py-16 md:py-24">
-        <div className="mx-auto max-w-6xl px-4 md:px-6">
+      <section className="relative overflow-hidden bg-[var(--flyhigh-section)] py-16 md:py-24">
+        {/* Ambient background blobs */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute top-0 right-0 h-96 w-96 -translate-y-1/4 translate-x-1/4 rounded-full bg-amber-200/20 blur-3xl"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-0 left-0 h-80 w-80 translate-y-1/4 -translate-x-1/4 rounded-full bg-indigo-200/20 blur-3xl"
+        />
+
+        <div className="relative mx-auto max-w-6xl px-4 md:px-6">
           <Reveal className="mx-auto max-w-2xl text-center">
-            <SectionLabel>Core Features</SectionLabel>
+            <SectionLabel>For Experts</SectionLabel>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-[var(--flyhigh-text)] md:text-4xl">
-              Everything You Need
+              Let Your Skill Pay You Back
             </h2>
             <p className="mt-4 text-body">
-              FlyHigh comes packed with powerful features designed to make
-              expert consultations seamless and secure.
+              Share what you already know — professionally, on your schedule,
+              with people who genuinely need your guidance.
             </p>
           </Reveal>
 
-          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {coreFeatures.map((feature, i) => {
-              const Icon = feature.icon
+          {/* 4-step card grid with connectors */}
+          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {expertSteps.map((step, i) => {
+              const Icon = step.icon
               return (
-                <Reveal key={feature.title} delay={i * 80}>
-                  <Card className="group h-full border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-lg">
-                    <CardContent className="flex h-full flex-col p-6">
+                <Reveal key={step.number} delay={i * 120}>
+                  <div className="group relative flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-slate-300 hover:shadow-xl">
+                    {/* Step number badge row */}
+                    <div className="mb-5 flex items-center gap-3">
                       <div
-                        className={`flex size-11 items-center justify-center rounded-xl ${feature.bgColor} ${feature.color}`}
+                        className={`flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${step.gradient} text-white shadow-md`}
                       >
-                        <Icon className="size-5" />
+                        <span className="text-sm font-bold">{step.number}</span>
                       </div>
-                      <h3 className="mt-4 font-bold text-[var(--flyhigh-text)]">
-                        {feature.title}
-                      </h3>
-                      <p className="mt-2 flex-1 text-sm leading-relaxed text-body">
-                        {feature.description}
-                      </p>
-                    </CardContent>
-                  </Card>
+                      {/* Horizontal connector to next card */}
+                      {i < expertSteps.length - 1 && (
+                        <div
+                          aria-hidden="true"
+                          className="hidden h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent lg:block"
+                        />
+                      )}
+                    </div>
+
+                    {/* Icon */}
+                    <div
+                      className={`mb-4 flex size-12 items-center justify-center rounded-xl bg-gradient-to-br ${step.gradient} shadow-md`}
+                    >
+                      <Icon className="size-6 text-white" />
+                    </div>
+
+                    <h3 className="text-lg font-bold text-[var(--flyhigh-text)]">
+                      {step.title}
+                    </h3>
+                    <p className="mt-2 flex-1 text-sm leading-relaxed text-body">
+                      {step.description}
+                    </p>
+                  </div>
                 </Reveal>
               )
             })}
           </div>
+
+          {/* Expert CTA pill + button */}
+          <Reveal delay={500}>
+            <div className="mt-14 text-center">
+              <div className="inline-flex items-center gap-3 rounded-full border border-amber-200 bg-amber-50 px-5 py-2.5">
+                <Star className="size-4 text-amber-500" />
+                <span className="text-sm font-semibold text-amber-800">
+                  Join {expertCountFormatted} experts already earning on FlyHigh
+                </span>
+              </div>
+              <div className="mt-5">
+                <Button
+                  size="lg"
+                  onClick={handleBecomeExpert}
+                  className="h-12 gap-2 bg-gradient-to-r from-amber-500 to-orange-600 px-8 text-base font-semibold text-white shadow-lg shadow-amber-500/25 transition-all hover:scale-[1.02] hover:shadow-xl"
+                >
+                  Start Earning Today
+                  <ArrowRight className="size-4" />
+                </Button>
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
@@ -612,20 +485,20 @@ export default function HowItWorksPage() {
               aria-hidden="true"
               className="mx-auto mb-6 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--flyhigh-primary)] to-[var(--flyhigh-primary-hover)] shadow-lg shadow-indigo-500/20"
             >
-              <Zap className="size-7 text-white" />
+              <MessageSquare className="size-7 text-white" />
             </div>
             <h2 className="text-3xl font-bold tracking-tight text-[var(--flyhigh-text)] md:text-4xl lg:text-5xl">
               Ready to Get Started?
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-body">
-              Join thousands of satisfied users who trust FlyHigh for their
-              technical solutions. Start your journey today with our risk-free
-              trial.
+              Join thousands of users who trust FlyHigh for expert guidance.
+              Your first step toward clarity is just a click away.
             </p>
 
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Button
                 size="lg"
+                onClick={handleGetStarted}
                 className="h-12 gap-2 bg-[var(--flyhigh-primary)] px-8 text-base shadow-lg shadow-indigo-500/25 hover:bg-[var(--flyhigh-primary-hover)]"
               >
                 Get Started Now
@@ -634,14 +507,21 @@ export default function HowItWorksPage() {
               <Button
                 size="lg"
                 variant="outline"
+                onClick={handleBecomeExpert}
                 className="h-12 border-slate-300 px-8 text-base text-slate-700 hover:bg-white"
               >
-                Explore All Features
+                Become an Expert
               </Button>
             </div>
 
+            {/* Guarantees row */}
             <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-3">
-              {guarantees.map((g) => {
+              {[
+                { text: "Verified Experts Only", icon: Shield },
+                { text: "24/7 Support", icon: Clock },
+                { text: "No Hidden Fees", icon: DollarSign },
+                { text: "Pay-Per-Session", icon: CheckCircle },
+              ].map((g) => {
                 const GIcon = g.icon
                 return (
                   <span

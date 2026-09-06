@@ -15,6 +15,7 @@ import com.flyhigh.backend.repository.InteractionRepository;
 import com.flyhigh.backend.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -42,6 +43,10 @@ public class ExpertSearchService {
     private final CallRequestRepository callRequestRepository;
     private final PricingService pricingService;
     private final AuthService authService;
+
+    /** Online window (seconds) — must match AuthService.computeExpertStatus. */
+    @Value("${app.presence.online-window-seconds:120}")
+    private long presenceOnlineWindowSeconds;
 
     public ExpertSearchService(MongoTemplate mongoTemplate,
                                ExpertProfileRepository expertProfileRepository,
@@ -105,8 +110,23 @@ public class ExpertSearchService {
                     .regex(".*" + Pattern.quote(language) + ".*", "i"));
         }
 
-        // NOTE: Availability filter (Online/Offline) is applied post-query
-        // since isOnline is now computed from heartbeat (lastActivityAt)
+        // Availability filter pushed down to the DB query so pagination sees
+        // only matching experts (previously it ran after pagination and only
+        // checked the already-loaded page, leaving the Online Experts section
+        // empty whenever online experts sat beyond the first page).
+        // Mirrors AuthService.computeExpertStatus: ONLINE = isOnline=true with
+        // a heartbeat within the online window. Experts with an active session
+        // (BUSY) keep heartbeating from the UI every 60s, so they stay included.
+        if (isNotEmpty(availability)) {
+            boolean filterOnline = "Online".equalsIgnoreCase(availability);
+            if (filterOnline) {
+                query.addCriteria(Criteria.where("isOnline").is(true));
+                query.addCriteria(Criteria.where("lastActivityAt")
+                        .gt(Instant.now().minusSeconds(presenceOnlineWindowSeconds)));
+            } else {
+                query.addCriteria(Criteria.where("isOnline").ne(true));
+            }
+        }
 
         // Experience range filter
         addExperienceCriteria(query, experience);
@@ -114,8 +134,8 @@ public class ExpertSearchService {
         // Price range filter
         addPriceCriteria(query, price);
 
-        // Rating filter — no-op placeholder (no rating system exists yet)
-        // addRatingCriteria(query, rating);
+        // Rating filter
+        addRatingCriteria(query, rating);
 
         // Apply DB-level sort (pre-sort for consistent pagination)
         applySort(query, sort);
@@ -143,7 +163,8 @@ public class ExpertSearchService {
                 .map(profile -> toSummary(profile, userMap.get(profile.getUserId())))
                 .toList();
 
-        // Post-filters (text search + availability) applied only to current page
+        // Post-filter (text search only) applied to the current page —
+        // the availability filter is pushed down to the DB query above.
         List<ExpertSummaryResponse> filtered = summaries;
         boolean hasPostFilter = false;
 
@@ -151,14 +172,6 @@ public class ExpertSearchService {
             String normalizedQuery = q.toLowerCase().trim();
             filtered = filtered.stream()
                     .filter(s -> matchesTextSearch(s, normalizedQuery))
-                    .toList();
-            hasPostFilter = true;
-        }
-
-        if (isNotEmpty(availability)) {
-            boolean filterOnline = "Online".equalsIgnoreCase(availability);
-            filtered = filtered.stream()
-                    .filter(s -> filterOnline == Boolean.TRUE.equals(s.getIsOnline()))
                     .toList();
             hasPostFilter = true;
         }
@@ -268,10 +281,13 @@ public class ExpertSearchService {
         List<ExpertReviewResponse> reviews = reviewedCalls.stream()
                 .map(cr -> {
                     ExpertReviewResponse r = new ExpertReviewResponse();
+                    r.setCallRequestId(cr.getId());
                     r.setClientName(cr.getClientName() != null ? cr.getClientName() : "Anonymous");
                     r.setRating(cr.getRating());
                     r.setReview(cr.getReview());
                     r.setCreatedAt(cr.getCreatedAt());
+                    r.setExpertResponse(cr.getExpertResponse());
+                    r.setExpertRespondedAt(cr.getExpertRespondedAt());
                     return r;
                 })
                 .toList();
@@ -323,13 +339,30 @@ public class ExpertSearchService {
 
     private void addPriceCriteria(Query query, String price) {
         if (!isNotEmpty(price)) return;
+        // UI sends INR labels — rates are stored in INR/hour
         switch (price) {
+            case "Under ₹500" -> query.addCriteria(Criteria.where("hourlyRate").lt(500.0));
+            case "₹500 - ₹1000" -> {
+                query.addCriteria(Criteria.where("hourlyRate").gte(500.0));
+                query.addCriteria(Criteria.where("hourlyRate").lte(1000.0));
+            }
+            case "₹1000+" -> query.addCriteria(Criteria.where("hourlyRate").gt(1000.0));
+            // Legacy USD labels — kept for backward compatibility
             case "Under $40" -> query.addCriteria(Criteria.where("hourlyRate").lt(40.0));
             case "$40 - $70" -> {
                 query.addCriteria(Criteria.where("hourlyRate").gte(40.0));
                 query.addCriteria(Criteria.where("hourlyRate").lte(70.0));
             }
             case "$70+" -> query.addCriteria(Criteria.where("hourlyRate").gt(70.0));
+        }
+    }
+
+    private void addRatingCriteria(Query query, String rating) {
+        if (!isNotEmpty(rating)) return;
+        switch (rating) {
+            case "4.5+" -> query.addCriteria(Criteria.where("averageRating").gte(4.5));
+            case "4.0+" -> query.addCriteria(Criteria.where("averageRating").gte(4.0));
+            case "3.5+" -> query.addCriteria(Criteria.where("averageRating").gte(3.5));
         }
     }
 

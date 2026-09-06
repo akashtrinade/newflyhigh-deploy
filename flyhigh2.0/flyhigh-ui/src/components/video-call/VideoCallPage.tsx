@@ -61,6 +61,20 @@ export default function VideoCallPage() {
   const { user } = useAuth()
   const socket = useSocket()
 
+  const {
+    remoteDisconnected,
+    callEndedByOther,
+    clearRemoteDisconnected,
+    clearCallEndedByOther,
+  } = socket
+
+  // Clear stale disconnect flags when (re)entering a call page
+  useEffect(() => {
+    clearRemoteDisconnected()
+    clearCallEndedByOther()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const callRequestId = searchParams.get("callRequestId") || ""
   const roomId = searchParams.get("roomId") || ""
   const peerName = searchParams.get("peerName") || "Participant"
@@ -150,6 +164,20 @@ export default function VideoCallPage() {
   const { messages: chatMessages, addMessages, clearMessages } = useChatWorker()
   const [isHoveringControls, setIsHoveringControls] = useState(true)
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null)
+
+  // Auto-dismiss screen share indicator after a few seconds
+  const [showShareIndicator, setShowShareIndicator] = useState(false)
+  const shareIndicatorTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
+  useEffect(() => {
+    if (webrtc.isScreenSharing || webrtc.isRemoteScreenSharing) {
+      setShowShareIndicator(true)
+      if (shareIndicatorTimerRef.current) clearTimeout(shareIndicatorTimerRef.current)
+      shareIndicatorTimerRef.current = setTimeout(() => setShowShareIndicator(false), 3000)
+    } else {
+      setShowShareIndicator(false)
+    }
+    return () => { if (shareIndicatorTimerRef.current) clearTimeout(shareIndicatorTimerRef.current) }
+  }, [webrtc.isScreenSharing, webrtc.isRemoteScreenSharing])
 
   // Init call on mount
   useEffect(() => {
@@ -278,6 +306,37 @@ export default function VideoCallPage() {
         onMouseMove={showControls}
         onTouchStart={showControls}
       >
+        {/* Connection status banner — surfaced when the peer drops or ends the call */}
+        {(remoteDisconnected || callEndedByOther) && (
+          <div className="z-30 flex items-center justify-between gap-4 border-b border-amber-500/30 bg-amber-500/10 px-5 py-3">
+            <p className="text-sm font-medium text-amber-300">
+              {callEndedByOther
+                ? `${peerName} ended the call.`
+                : `${peerName} lost connection — waiting for them to reconnect…`}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+                onClick={() => {
+                  clearRemoteDisconnected()
+                  clearCallEndedByOther()
+                }}
+              >
+                Dismiss
+              </Button>
+              <Button
+                size="sm"
+                className="bg-amber-500 text-slate-950 hover:bg-amber-400"
+                onClick={handleEndCall}
+              >
+                Leave Call
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Main video area */}
         <div className="relative flex flex-1 items-center justify-center bg-gradient-to-b from-slate-900 via-slate-950 to-black">
           {/* Remote video */}
@@ -288,6 +347,22 @@ export default function VideoCallPage() {
               playsInline
               className="h-full w-full object-cover"
             />
+
+            {/* Screen share video — shown on top when remote is sharing screen */}
+            {webrtc.isRemoteScreenSharing && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="absolute inset-0 z-10 flex items-center justify-center bg-slate-950"
+              >
+                <video
+                  ref={webrtc.screenVideoRef}
+                  autoPlay
+                  playsInline
+                  className="h-full w-full object-contain"
+                />
+              </motion.div>
+            )}
 
             {/* Loading overlay — video elements are always in the DOM so
                 ontrack can fire and attach the remote stream even during
@@ -345,19 +420,41 @@ export default function VideoCallPage() {
             )}
           </div>
 
-          {/* Remote screen sharing indicator */}
-          {webrtc.isRemoteScreenSharing && (
-            <div className="absolute left-1/2 top-6 z-20 -translate-x-1/2">
+          {/* ── Screen Share Indicator (auto-dismiss after 3s, like Zoom/Meet) ── */}
+          <AnimatePresence>
+            {showShareIndicator && webrtc.isRemoteScreenSharing && (
               <motion.div
-                initial={{ opacity: 0, y: -10 }}
+                initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 rounded-full bg-indigo-600/90 px-4 py-2 text-sm font-medium text-white shadow-lg backdrop-blur"
+                exit={{ opacity: 0, y: -20 }}
+                className="absolute left-1/2 top-3 z-30 -translate-x-1/2"
               >
-                <Monitor className="size-4" />
-                {peerName} is sharing their screen
+                <div className="flex items-center gap-2 rounded-full bg-slate-900/95 border border-slate-700/60 px-4 py-2 shadow-lg backdrop-blur-xl">
+                  <Monitor className="size-4 text-indigo-400" />
+                  <span className="text-xs font-medium text-white whitespace-nowrap">
+                    {peerName} is sharing their screen
+                  </span>
+                </div>
               </motion.div>
-            </div>
-          )}
+            )}
+          </AnimatePresence>
+          <AnimatePresence>
+            {showShareIndicator && webrtc.isScreenSharing && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="absolute left-1/2 top-3 z-30 -translate-x-1/2"
+              >
+                <div className="flex items-center gap-2 rounded-full bg-red-900/95 border border-red-700/60 px-4 py-2 shadow-lg backdrop-blur-xl">
+                  <Monitor className="size-4 text-red-300" />
+                  <span className="text-xs font-medium text-white whitespace-nowrap">
+                    You&apos;re sharing your screen
+                  </span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Gradient overlays */}
           <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-slate-950/80 to-transparent" />
@@ -453,6 +550,27 @@ export default function VideoCallPage() {
                 </motion.div>
               </div>
             )}
+
+          {/* Remote camera PiP — shown when screen share fills main view */}
+          {webrtc.isRemoteScreenSharing && webrtc.remoteStreamConnected && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="absolute bottom-20 left-4 z-20 cursor-pointer overflow-hidden rounded-2xl border-2 border-slate-600/60 shadow-2xl shadow-black/50"
+              style={{ width: 180, height: 135 }}
+            >
+              <video
+                ref={webrtc.remoteVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute bottom-1.5 left-1.5 rounded-md bg-black/50 px-2 py-0.5 text-[10px] text-slate-300 backdrop-blur-sm">
+                {peerName}
+              </div>
+            </motion.div>
+          )}
 
           {/* Self-view (PiP) */}
           <motion.div

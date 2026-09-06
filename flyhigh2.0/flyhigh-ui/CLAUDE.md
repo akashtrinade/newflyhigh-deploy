@@ -1,5 +1,16 @@
 # CLAUDE.md — FlyHigh UI (Frontend)
 
+## Recent Changes (Aug 17, 2026)
+
+- **Auth**: `api/client.ts` has a single-flight 401 interceptor — refreshes the access token and retries once, so long calls survive the 15-min token expiry.
+- **Extension recovery**: `useRazorpay` keeps the verification payload on failure; `ExtendSessionPrompt` shows a "Retry Verification" button (no new charge).
+- **Feedback flow**: dashboard "Leave Feedback" passes `interactionId`; `CallCompletedPage` resolves paid status from `/payments/session-state` instead of URL params.
+- **Call resilience**: SocketContext re-joins the active call room on socket.io reconnect; `VideoCallPage` shows a banner for peer disconnect / call-ended-by-other with Dismiss and Leave Call.
+- **Dead buttons fixed**: "Book Session" on ExpertCard and ExpertProfileViewPage now trigger the connect flow.
+- **Legal pages**: new `components/legal/` — `/terms` (official T&C text) and `/privacy`; footer + signup TermsCheckbox link to them.
+- **Admin tables**: now consume the page-shaped `{content, totalPages, totalElements, page}` admin API.
+- **Search**: price filter (₹ labels) and rating filter now take effect.
+
 ## Build & Run
 
 ```bash

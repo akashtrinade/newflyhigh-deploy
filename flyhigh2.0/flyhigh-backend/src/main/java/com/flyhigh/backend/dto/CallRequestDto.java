@@ -21,6 +21,10 @@ public class CallRequestDto {
     private Boolean reviewSubmitted;
     private Boolean feedbackPending;
     private String interactionId;
+    private Double totalPaidAmount;
+    private Double expertAmount;
+    private String paymentStatus;
+    private Integer durationMinutes;
 
     public CallRequestDto() {}
 
@@ -72,4 +76,16 @@ public class CallRequestDto {
 
     public String getInteractionId() { return interactionId; }
     public void setInteractionId(String interactionId) { this.interactionId = interactionId; }
+
+    public Double getTotalPaidAmount() { return totalPaidAmount; }
+    public void setTotalPaidAmount(Double totalPaidAmount) { this.totalPaidAmount = totalPaidAmount; }
+
+    public Double getExpertAmount() { return expertAmount; }
+    public void setExpertAmount(Double expertAmount) { this.expertAmount = expertAmount; }
+
+    public String getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
+
+    public Integer getDurationMinutes() { return durationMinutes; }
+    public void setDurationMinutes(Integer durationMinutes) { this.durationMinutes = durationMinutes; }
 }

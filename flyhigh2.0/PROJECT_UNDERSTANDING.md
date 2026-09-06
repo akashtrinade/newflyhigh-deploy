@@ -1,5 +1,15 @@
 # FlyHigh 2.0 — Project Understanding
 
+## Key Fixes & Hardening (Aug 17, 2026)
+
+- **Authorization**: payment verify (client-only, order bound to session), call respond/end/status/rating, pending calls/feedback, expert email/status — ownership enforced, 403 on violation.
+- **Payment recovery**: verify now accepts `FREE_SESSION_EXPIRED` and completed-unpaid sessions; Razorpay webhook applies EXTENSION orders (atomic claim); UI has a retry-verification button for extensions.
+- **Paid-time**: cumulative `scheduledDurationMinutes` fixes elapsed/total paid time after extensions; minutes read from the paid order's notes.
+- **Auth expiry**: UI 401 interceptor refreshes tokens mid-call.
+- **Notifications**: backend `NotificationService` writes real notifications (call request/response, payments) — previously nobody wrote them.
+- **Fixes**: Leave Feedback now opens the rating form for paid sessions; Book Session buttons wired; Terms & Privacy pages at `/terms` and `/privacy`; price filter uses ₹ labels; rating filter implemented; socket reconnect re-joins call room; refunds require a COMPLETED session.
+- **Admin**: no default credentials (fail-fast without env vars); admin list endpoints return page-shaped `{content, totalPages, totalElements, page}`; DB-level role pagination.
+
 ## What Is FlyHigh?
 
 A **video-consultation marketplace** that connects clients seeking expert advice with vetted professionals across categories (legal, finance, tech, health, business). Think "Uber for expert consultations" — clients browse/search experts, request a call, and hop into a WebRTC video session.

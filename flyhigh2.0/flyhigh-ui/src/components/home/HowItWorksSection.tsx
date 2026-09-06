@@ -1,15 +1,25 @@
-import { ArrowRight, Calendar, Search, Video } from "lucide-react"
+import { ArrowRight } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { useAuth } from "@/contexts/AuthContext"
 
 import { howItWorksSteps } from "./data"
 import { Reveal } from "./Reveal"
 import { SectionLabel } from "./SectionLabel"
 
-const stepIcons = [Search, Calendar, Video]
-
 export function HowItWorksSection() {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+
+  const handleStartNow = () => {
+    if (user) {
+      navigate("/search-experts")
+    } else {
+      navigate("/signup")
+    }
+  }
   return (
     <section
       id="how-it-works"
@@ -23,16 +33,16 @@ export function HowItWorksSection() {
             id="how-it-works-heading"
             className="mt-3 text-3xl font-bold tracking-tight text-[var(--flyhigh-text)] md:text-4xl"
           >
-            3 Steps to Your Expert Session
+            5 Steps to Your Expert Session
           </h2>
           <p className="mt-4 text-body">
-            Get expert help in three simple steps — no subscriptions, no hassle.
+            Get expert help in five simple steps — no subscriptions, no hassle.
           </p>
         </Reveal>
 
-        <div className="relative mt-14 grid gap-8 md:grid-cols-3">
+        <div className="relative mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {howItWorksSteps.map((step, index) => {
-            const Icon = stepIcons[index]
+            const Icon = step.icon
             return (
               <Reveal key={step.step} delay={index * 120}>
                 <div className="relative flex flex-col items-center text-center">
@@ -55,7 +65,7 @@ export function HowItWorksSection() {
                   {index < howItWorksSteps.length - 1 && (
                     <div
                       aria-hidden="true"
-                      className="absolute top-8 -right-4 hidden md:block"
+                      className="absolute top-8 -right-4 hidden xl:block"
                     >
                       <ArrowRight className="size-5 text-indigo-300" />
                     </div>
@@ -74,6 +84,7 @@ export function HowItWorksSection() {
               </p>
               <Button
                 size="lg"
+                onClick={handleStartNow}
                 className="h-11 shrink-0 gap-2 bg-white px-6 text-[var(--flyhigh-primary)] hover:bg-white/90"
               >
                 Start Now — It&apos;s Free to Join

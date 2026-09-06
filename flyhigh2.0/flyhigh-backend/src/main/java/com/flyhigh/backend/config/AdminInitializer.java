@@ -30,10 +30,10 @@ public class AdminInitializer {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
 
-    @Value("${app.admin.email:admin@flyhigh.com}")
+    @Value("${app.admin.email:}")
     private String adminEmail;
 
-    @Value("${app.admin.password:Admin@123}")
+    @Value("${app.admin.password:}")
     private String adminPassword;
 
     public AdminInitializer(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder) {
@@ -43,6 +43,15 @@ public class AdminInitializer {
 
     @PostConstruct
     public void init() {
+        // Fail fast — never create an admin account with default or empty credentials
+        if (adminEmail == null || adminEmail.isBlank()
+                || adminPassword == null || adminPassword.isBlank()) {
+            throw new IllegalStateException(
+                    "Admin credentials are not configured: app.admin.email and app.admin.password "
+                    + "must be set via ADMIN_EMAIL/ADMIN_PASSWORD environment variables "
+                    + "(or the dev profile's application-dev.yml). Refusing to start without them.");
+        }
+
         String email = adminEmail.toLowerCase().trim();
 
         // Check if admin already exists

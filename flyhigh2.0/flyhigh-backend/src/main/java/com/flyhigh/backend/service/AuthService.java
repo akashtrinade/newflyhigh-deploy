@@ -52,6 +52,10 @@ public class AuthService {
     @Value("${otp.max-requests-per-hour:3}")
     private int maxRequestsPerHour;
 
+    /** Window (seconds) after the last heartbeat before an expert reads as offline. */
+    @Value("${app.presence.online-window-seconds:120}")
+    private long presenceOnlineWindowSeconds;
+
     public AuthService(PendingUserRepository pendingUserRepository,
             UserRepository userRepository,
             PasswordResetOtpRepository passwordResetOtpRepository,
@@ -361,8 +365,8 @@ public class AuthService {
     /**
      * Computes the expert's presence status using heartbeat-based logic:
      * - BUSY if expert has an active session (ACTIVE or CREATED)
-     * - ONLINE if expert's isOnline=true AND lastActivityAt is within the last 2 minutes
-     * - OFFLINE otherwise (either isOnline=false or heartbeat expired beyond 2 min)
+     * - ONLINE if expert's isOnline=true AND lastActivityAt is within the configured window
+     * - OFFLINE otherwise (either isOnline=false or heartbeat expired)
      * 
      * @return "ONLINE", "BUSY", or "OFFLINE"
      */
@@ -383,7 +387,7 @@ public class AuthService {
         // Heartbeat check: if lastActivityAt is within the last 2 minutes → ONLINE
         // Otherwise → OFFLINE (heartbeat expired, likely closed the browser)
         Instant lastActivity = profile.getLastActivityAt();
-        if (lastActivity != null && lastActivity.isAfter(Instant.now().minusSeconds(120))) {
+        if (lastActivity != null && lastActivity.isAfter(Instant.now().minusSeconds(presenceOnlineWindowSeconds))) {
             return "ONLINE";
         }
 

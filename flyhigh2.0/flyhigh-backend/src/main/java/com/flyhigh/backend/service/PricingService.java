@@ -2,7 +2,6 @@ package com.flyhigh.backend.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -53,11 +52,14 @@ public class PricingService {
     /** 100% as BigDecimal. */
     private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
 
-    @Value("${platform.commission.percent:20}")
-    private double commissionPercentRaw; // Spring injects double; we convert to BigDecimal
+    private final PlatformSettingsService settingsService;
+
+    public PricingService(PlatformSettingsService settingsService) {
+        this.settingsService = settingsService;
+    }
 
     private BigDecimal commissionPercent() {
-        return BigDecimal.valueOf(commissionPercentRaw);
+        return BigDecimal.valueOf(settingsService.getCommissionPercent());
     }
 
     // ── Core calculation ────────────────────────────────────────
@@ -158,7 +160,7 @@ public class PricingService {
      * Returns the configured commission percent (useful for DTO population).
      */
     public double getCommissionPercent() {
-        return commissionPercentRaw;
+        return settingsService.getCommissionPercent();
     }
 
     // ── Value object ────────────────────────────────────────────

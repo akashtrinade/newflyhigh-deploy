@@ -56,6 +56,7 @@ public class PaymentService {
     private final PricingService pricingService;
     private final MongoTemplate mongoTemplate;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     @Value("${razorpay.key.id}")
     private String razorpayKeyId;
@@ -80,7 +81,8 @@ public class PaymentService {
                           ExpertEarningService expertEarningService,
                           PricingService pricingService,
                           MongoTemplate mongoTemplate,
-                          AuditService auditService) {
+                          AuditService auditService,
+                          NotificationService notificationService) {
         this.interactionRepository = interactionRepository;
         this.sessionPaymentRepository = sessionPaymentRepository;
         this.expertProfileRepository = expertProfileRepository;
@@ -90,6 +92,7 @@ public class PaymentService {
         this.pricingService = pricingService;
         this.mongoTemplate = mongoTemplate;
         this.auditService = auditService;
+        this.notificationService = notificationService;
     }
 
     // ── Razorpay Order Creation ──────────────────────────────────
@@ -211,6 +214,31 @@ public class PaymentService {
                 String.valueOf(breakdown.clientAmountInPaise()), currency, razorpayKeyId);
     }
 
+    /**
+     * Resolves the purchased minutes for a verified payment from the Razorpay order's
+     * notes (written at order creation). Binding minutes to the ORDER that was actually
+     * paid — instead of the interaction's current recommendedDurationMinutes — prevents
+     * an older order from granting the minutes of a newer, unpaid order.
+     */
+    private int resolvePurchasedMinutes(String razorpayOrderId, int fallbackMinutes) {
+        try {
+            Order order = razorpayClient.orders.fetch(razorpayOrderId);
+            if (order != null && order.has("notes")) {
+                Object notesObj = order.get("notes");
+                if (notesObj instanceof JSONObject notes && notes.has("durationMinutes")) {
+                    Object duration = notes.get("durationMinutes");
+                    if (duration instanceof Number && ((Number) duration).intValue() > 0) {
+                        return ((Number) duration).intValue();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not read durationMinutes from Razorpay order {} — falling back to {} min",
+                    truncateForLog(razorpayOrderId), fallbackMinutes);
+        }
+        return fallbackMinutes;
+    }
+
     // ── Payment Verification (atomic state transition) ───────────
 
     /**
@@ -225,10 +253,36 @@ public class PaymentService {
      * (exponential backoff: 1s → 2s → 4s, max 3 attempts).
      */
     @Retry(name = "razorpayRetry")
-    public SessionStateResponse verifyAndConfirmPayment(PaymentVerifyRequest request) {
-        // Atomic check-and-set: only transitions if status is FREE_SESSION or PAYMENT_PENDING
+    public SessionStateResponse verifyAndConfirmPayment(PaymentVerifyRequest request, String callerUserId) {
+        Interaction existing = interactionRepository.findById(request.getInteractionId()).orElse(null);
+        if (existing == null) {
+            throw new IllegalArgumentException("Interaction not found: " + request.getInteractionId());
+        }
+
+        // ── Authorization: only the session's client can verify its payment ──
+        if (callerUserId == null || !callerUserId.equals(existing.getClientId())) {
+            throw new SecurityException("Not authorized to verify payment for this session");
+        }
+
+        // ── Order binding: the verified order must be the one created for THIS session ──
+        // Prevents one paid order from being applied to a different interaction.
+        if (existing.getRazorpayOrderId() != null
+                && !existing.getRazorpayOrderId().equals(request.getRazorpayOrderId())) {
+            throw new InvalidSessionStateException("Payment order does not belong to this session");
+        }
+
+        // Atomic check-and-set. Accepts:
+        //  - FREE_SESSION / PAYMENT_PENDING (normal checkout)
+        //  - FREE_SESSION_EXPIRED (checkout straddled the trial expiry — money must still activate)
+        //  - COMPLETED with no payment captured (session auto-ended while checkout was open)
+        // This guarantees a captured Razorpay payment can never hit a dead 409 state.
+        Criteria payableStatus = Criteria.where("status")
+                .in(SessionStatus.FREE_SESSION, SessionStatus.PAYMENT_PENDING, SessionStatus.FREE_SESSION_EXPIRED);
+        Criteria completedUnpaid = Criteria.where("status").is(SessionStatus.COMPLETED)
+                .and("paymentStatus").is(PaymentStatus.UNPAID)
+                .and("totalPaidAmount").in(null, 0);
         Query query = new Query(Criteria.where("_id").is(request.getInteractionId())
-                .and("status").in(SessionStatus.FREE_SESSION, SessionStatus.PAYMENT_PENDING));
+                .orOperator(payableStatus, completedUnpaid));
 
         Update update = new Update()
                 .set("status", SessionStatus.PAYMENT_VERIFIED)
@@ -240,9 +294,11 @@ public class PaymentService {
                 Interaction.class);
 
         if (interaction == null) {
-            // Already processed — return current state (idempotent retry)
+            // Already processed — idempotent only if this exact payment on this exact order
             Interaction current = interactionRepository.findById(request.getInteractionId()).orElse(null);
-            if (current != null && current.getStatus() == SessionStatus.PAID_SESSION) {
+            if (current != null && current.getStatus() == SessionStatus.PAID_SESSION
+                    && request.getRazorpayOrderId().equals(current.getRazorpayOrderId())
+                    && request.getRazorpayPaymentId().equals(current.getRazorpayPaymentId())) {
                 log.info("Payment already verified for session {} (idempotent retry)", request.getInteractionId());
                 return getSessionState(request.getInteractionId());
             }
@@ -255,8 +311,8 @@ public class PaymentService {
         boolean verified = verifySignature(request.getRazorpayOrderId(),
                 request.getRazorpayPaymentId(), request.getRazorpaySignature());
         if (!verified) {
-            // Rollback: revert to PAYMENT_PENDING
-            interaction.setStatus(SessionStatus.PAYMENT_PENDING);
+            // Rollback: revert to the status captured before the transition
+            interaction.setStatus(existing.getStatus());
             interactionRepository.save(interaction);
             log.error("Payment signature verification FAILED: orderId={} paymentId={}",
                     request.getRazorpayOrderId(),
@@ -274,8 +330,11 @@ public class PaymentService {
         }
 
         // Calculate amounts via BigDecimal
-        int purchasedMinutes = interaction.getRecommendedDurationMinutes() != null
-                ? interaction.getRecommendedDurationMinutes() : 15;
+        // Purchased minutes come from the verified order's notes so the granted time
+        // always matches the order actually paid (not a newer order's duration).
+        int purchasedMinutes = resolvePurchasedMinutes(request.getRazorpayOrderId(),
+                interaction.getRecommendedDurationMinutes() != null
+                        ? interaction.getRecommendedDurationMinutes() : 15);
         ExpertProfile expertProfile = expertProfileRepository.findByUserId(interaction.getExpertId()).orElse(null);
         double hourlyRate = expertProfile != null && expertProfile.getHourlyRate() != null
                 ? expertProfile.getHourlyRate() : 0.0;
@@ -286,6 +345,9 @@ public class PaymentService {
         interaction.setPaymentStatus(PaymentStatus.HELD);
         interaction.setStatus(SessionStatus.PAID_SESSION);
         interaction.setPaidSessionEndsAt(now.plusSeconds(purchasedMinutes * 60L));
+        // scheduledDurationMinutes tracks CUMULATIVE purchased minutes — the source of
+        // truth for elapsed/total paid-time calculations (see getSessionState).
+        interaction.setScheduledDurationMinutes(purchasedMinutes);
         interaction.setTotalPaidAmount(breakdown.clientAmountDouble());
         interaction.setExpertAmount(breakdown.expertAmountDouble());
         interaction.setCommissionAmount(breakdown.commissionAmountDouble());
@@ -330,15 +392,31 @@ public class PaymentService {
                 interaction.getClientId(), breakdown.clientAmountDouble(),
                 request.getInteractionId(), verifiedMetadata);
 
+        notificationService.createForUser(interaction.getClientId(), "payment",
+                "Your payment of ₹" + breakdown.clientAmount().toPlainString()
+                        + " has been received for your consultation.",
+                request.getInteractionId(), null);
+
         return getSessionState(request.getInteractionId());
     }
 
     /**
      * Verifies an extension payment with atomic state check.
      */
-    public SessionStateResponse verifyExtensionPayment(PaymentVerifyRequest request) {
+    public SessionStateResponse verifyExtensionPayment(PaymentVerifyRequest request, String callerUserId) {
         Interaction interaction = interactionRepository.findById(request.getInteractionId())
                 .orElseThrow(() -> new IllegalArgumentException("Interaction not found"));
+
+        // ── Authorization: only the session's client can verify its extension payment ──
+        if (callerUserId == null || !callerUserId.equals(interaction.getClientId())) {
+            throw new SecurityException("Not authorized to verify extension payment for this session");
+        }
+
+        // ── Order binding: the verified order must be the one created for THIS session ──
+        if (interaction.getRazorpayOrderId() != null
+                && !interaction.getRazorpayOrderId().equals(request.getRazorpayOrderId())) {
+            throw new InvalidSessionStateException("Payment order does not belong to this session");
+        }
 
         if (interaction.getStatus() != SessionStatus.PAID_SESSION) {
             throw new InvalidSessionStateException("Extension requires an active paid session. Current: "
@@ -353,26 +431,61 @@ public class PaymentService {
             throw new PaymentVerificationException("Extension payment verification failed: invalid signature");
         }
 
-        int extensionMinutes = interaction.getRecommendedDurationMinutes() != null
-                ? interaction.getRecommendedDurationMinutes() : 15;
-        ExpertProfile expertProfile = expertProfileRepository.findByUserId(interaction.getExpertId()).orElse(null);
+        // ── Atomic claim: exactly ONE verification per payment can succeed ──
+        // findAndModify sets razorpayPaymentId only while it differs from the incoming
+        // paymentId. Concurrent duplicate verifies of the SAME extension payment:
+        // one wins the claim; the rest take the idempotent path below. Without this,
+        // a double-click or client retry would extend the session twice and
+        // double-count the amounts.
+        Query claimQuery = new Query(Criteria.where("_id").is(request.getInteractionId())
+                .and("status").is(SessionStatus.PAID_SESSION)
+                .and("razorpayPaymentId").ne(request.getRazorpayPaymentId()));
+        Update claimUpdate = new Update()
+                .set("razorpayPaymentId", request.getRazorpayPaymentId())
+                .set("updatedAt", Instant.now());
+        Interaction claimed = mongoTemplate.findAndModify(
+                claimQuery, claimUpdate,
+                org.springframework.data.mongodb.core.FindAndModifyOptions.options().returnNew(true),
+                Interaction.class);
+
+        if (claimed == null) {
+            // Another request won the claim — either this exact payment (idempotent retry)
+            // or a newer payment has already been recorded for the session.
+            Interaction current = interactionRepository.findById(request.getInteractionId()).orElse(null);
+            if (current != null && request.getRazorpayPaymentId().equals(current.getRazorpayPaymentId())) {
+                log.info("Extension payment already verified (idempotent retry): interactionId={} paymentId={}",
+                        request.getInteractionId(), truncateForLog(request.getRazorpayPaymentId()));
+                return getSessionState(request.getInteractionId());
+            }
+            throw new InvalidSessionStateException(
+                    "This extension payment was superseded by another payment for the session.");
+        }
+
+        // Extension minutes are bound to the verified order's notes — paying an older
+        // order must not grant the minutes of a newer order created afterwards.
+        int extensionMinutes = resolvePurchasedMinutes(request.getRazorpayOrderId(),
+                claimed.getRecommendedDurationMinutes() != null
+                        ? claimed.getRecommendedDurationMinutes() : 15);
+        ExpertProfile expertProfile = expertProfileRepository.findByUserId(claimed.getExpertId()).orElse(null);
         double hourlyRate = expertProfile != null && expertProfile.getHourlyRate() != null
                 ? expertProfile.getHourlyRate() : 0.0;
         PricingService.PriceBreakdown breakdown = pricingService.calculate(hourlyRate, extensionMinutes);
 
-        Instant currentEnd = interaction.getPaidSessionEndsAt();
+        Instant currentEnd = claimed.getPaidSessionEndsAt();
         if (currentEnd == null || currentEnd.isBefore(Instant.now())) {
             currentEnd = Instant.now();
         }
-        interaction.setPaidSessionEndsAt(currentEnd.plusSeconds(extensionMinutes * 60L));
-        interaction.setTotalPaidAmount((interaction.getTotalPaidAmount() != null
-                ? interaction.getTotalPaidAmount() : 0) + breakdown.clientAmountDouble());
-        interaction.setExpertAmount((interaction.getExpertAmount() != null
-                ? interaction.getExpertAmount() : 0) + breakdown.expertAmountDouble());
-        interaction.setCommissionAmount((interaction.getCommissionAmount() != null
-                ? interaction.getCommissionAmount() : 0) + breakdown.commissionAmountDouble());
-        interaction.setRazorpayPaymentId(request.getRazorpayPaymentId());
-        interactionRepository.save(interaction);
+        claimed.setPaidSessionEndsAt(currentEnd.plusSeconds(extensionMinutes * 60L));
+        claimed.setTotalPaidAmount((claimed.getTotalPaidAmount() != null
+                ? claimed.getTotalPaidAmount() : 0) + breakdown.clientAmountDouble());
+        claimed.setExpertAmount((claimed.getExpertAmount() != null
+                ? claimed.getExpertAmount() : 0) + breakdown.expertAmountDouble());
+        claimed.setCommissionAmount((claimed.getCommissionAmount() != null
+                ? claimed.getCommissionAmount() : 0) + breakdown.commissionAmountDouble());
+        int priorPaidMinutes = claimed.getScheduledDurationMinutes() != null
+                ? claimed.getScheduledDurationMinutes() : 0;
+        claimed.setScheduledDurationMinutes(priorPaidMinutes + extensionMinutes);
+        interactionRepository.save(claimed);
 
         try {
             SessionPayment sp = SessionPayment.builder()
@@ -403,13 +516,33 @@ public class PaymentService {
         extMetadata.put("paymentId", truncateForLog(request.getRazorpayPaymentId()));
         extMetadata.put("extensionMinutes", String.valueOf(extensionMinutes));
         auditService.record("SESSION_EXTENDED", "INTERACTION", request.getInteractionId(),
-                interaction.getClientId(), breakdown.clientAmountDouble(),
+                claimed.getClientId(), breakdown.clientAmountDouble(),
                 request.getInteractionId(), extMetadata);
+
+        notificationService.createForUser(claimed.getClientId(), "payment",
+                "Your extension payment of ₹" + breakdown.clientAmount().toPlainString()
+                        + " has been received.",
+                request.getInteractionId(), null);
 
         return getSessionState(request.getInteractionId());
     }
 
     // ── Session State ───────────────────────────────────────────
+
+    /**
+     * Participant-scoped session state polling. Only the interaction's client or
+     * expert may read (and thereby drive) session state transitions.
+     */
+    public SessionStateResponse getSessionStateAuthorized(String interactionId, String callerUserId) {
+        Interaction interaction = interactionRepository.findById(interactionId)
+                .orElseThrow(() -> new IllegalArgumentException("Interaction not found"));
+        if (callerUserId == null
+                || (!callerUserId.equals(interaction.getClientId())
+                    && !callerUserId.equals(interaction.getExpertId()))) {
+            throw new SecurityException("Only session participants can view session state");
+        }
+        return getSessionState(interactionId);
+    }
 
     public SessionStateResponse getSessionState(String interactionId) {
         Interaction interaction = interactionRepository.findById(interactionId)
@@ -459,19 +592,22 @@ public class PaymentService {
         if (interaction.getPaidSessionEndsAt() != null && interaction.getStatus() == SessionStatus.PAID_SESSION) {
             long remaining = interaction.getPaidSessionEndsAt().getEpochSecond() - Instant.now().getEpochSecond();
             state.setPaidSessionRemainingSec((int) Math.max(0, remaining));
-            int totalDurationSec = interaction.getRecommendedDurationMinutes() != null
-                    ? interaction.getRecommendedDurationMinutes() * 60 : 900;
+            // Cumulative purchased minutes (includes extensions). Falls back to the
+            // recommended duration for legacy rows where scheduledDurationMinutes was
+            // only ever seeded with the creation default.
+            int totalPaidMinutes = interaction.getScheduledDurationMinutes() != null
+                    ? interaction.getScheduledDurationMinutes()
+                    : (interaction.getRecommendedDurationMinutes() != null
+                            ? interaction.getRecommendedDurationMinutes() : 15);
+            int totalDurationSec = totalPaidMinutes * 60;
             state.setElapsedPaidSeconds(Math.max(0, totalDurationSec - (int) Math.max(0, remaining)));
-            state.setTotalPaidDurationMin(interaction.getRecommendedDurationMinutes() != null
-                    ? interaction.getRecommendedDurationMinutes() : 0);
+            state.setTotalPaidDurationMin(totalPaidMinutes);
             state.setShowExtendPrompt(remaining > 0 && remaining <= extendPromptSeconds);
 
             if (remaining <= 0) {
                 interaction.setStatus(SessionStatus.COMPLETED);
                 interaction.setEndedAt(Instant.now());
-                interaction.setActualDurationMinutes(
-                        (interaction.getRecommendedDurationMinutes() != null
-                                ? interaction.getRecommendedDurationMinutes() : 0) + (freeTrialSeconds / 60));
+                interaction.setActualDurationMinutes(totalPaidMinutes + (freeTrialSeconds / 60));
                 interactionRepository.save(interaction);
                 CallRequest cr = callRequestRepository.findByInteractionId(interaction.getId()).orElse(null);
                 if (cr != null) { cr.setStatus("COMPLETED"); cr.setRespondedAt(Instant.now()); callRequestRepository.save(cr); }
@@ -486,7 +622,16 @@ public class PaymentService {
                         "SYSTEM", interaction.getTotalPaidAmount(),
                         interaction.getId(), completedMetadata);
 
-                expertEarningService.processEarning(interaction);
+                try {
+                    expertEarningService.processEarning(interaction);
+                } catch (org.springframework.dao.DuplicateKeyException e) {
+                    // Concurrent completion paths (poll + end call) both passed the
+                    // find-then-save guard — the unique index on interactionId
+                    // already prevented the duplicate; swallow quietly.
+                    log.debug("Earning already exists for interaction {} (concurrent completion)", interaction.getId());
+                } catch (Exception e) {
+                    log.error("Earning processing failed for interaction {}: {}", interaction.getId(), e.getMessage());
+                }
 
                 // ── Audit: EARNING_PROCESSED ──
                 Map<String, String> earningMetadata = new HashMap<>();
@@ -568,6 +713,14 @@ public class PaymentService {
             return;
         }
 
+        // Extension orders are handled separately — previously they were silently
+        // skipped once the session was already PAID_SESSION, leaving money captured
+        // with no minutes granted and no ledger record.
+        if ("EXTENSION".equals(resolveOrderType(orderId))) {
+            processWebhookExtension(interaction, orderId, paymentId);
+            return;
+        }
+
         // Idempotent: skip if already in PAID_SESSION
         if (interaction.getStatus() == SessionStatus.PAID_SESSION) {
             log.info("Webhook: interaction {} already PAID (idempotent)", interaction.getId());
@@ -576,14 +729,16 @@ public class PaymentService {
 
         // Only process if in a payable state
         if (interaction.getStatus() != SessionStatus.PAYMENT_PENDING
-                && interaction.getStatus() != SessionStatus.PAYMENT_VERIFIED) {
+                && interaction.getStatus() != SessionStatus.PAYMENT_VERIFIED
+                && interaction.getStatus() != SessionStatus.FREE_SESSION_EXPIRED) {
             log.warn("Webhook: interaction {} in non-payable state: {}", interaction.getId(), interaction.getStatus());
             return;
         }
 
         // Transition to paid session (same logic as verifyAndConfirmPayment)
-        int purchasedMinutes = interaction.getRecommendedDurationMinutes() != null
-                ? interaction.getRecommendedDurationMinutes() : 15;
+        int purchasedMinutes = resolvePurchasedMinutes(orderId,
+                interaction.getRecommendedDurationMinutes() != null
+                        ? interaction.getRecommendedDurationMinutes() : 15);
         ExpertProfile expertProfile = expertProfileRepository.findByUserId(interaction.getExpertId()).orElse(null);
         double hourlyRate = expertProfile != null && expertProfile.getHourlyRate() != null
                 ? expertProfile.getHourlyRate() : 0.0;
@@ -593,6 +748,7 @@ public class PaymentService {
         interaction.setPaymentStatus(PaymentStatus.HELD);
         interaction.setStatus(SessionStatus.PAID_SESSION);
         interaction.setPaidSessionEndsAt(now.plusSeconds(purchasedMinutes * 60L));
+        interaction.setScheduledDurationMinutes(purchasedMinutes);
         interaction.setTotalPaidAmount(breakdown.clientAmountDouble());
         interaction.setExpertAmount(breakdown.expertAmountDouble());
         interaction.setCommissionAmount(breakdown.commissionAmountDouble());
@@ -618,8 +774,134 @@ public class PaymentService {
         }
 
         socketIOEventService.broadcastSessionEvent(interaction.getId(), "payment-completed", null);
+
+        notificationService.createForUser(interaction.getClientId(), "payment",
+                "Your payment of ₹" + breakdown.clientAmount().toPlainString()
+                        + " has been received for your consultation.",
+                interaction.getId(), null);
+
         log.info("Webhook processed: interactionId={} paymentId={} amount={}",
                 interaction.getId(), truncateForLog(paymentId), breakdown.clientAmount());
+    }
+
+    /**
+     * Webhook handler for EXTENSION orders. Grants the extension minutes even if
+     * the client never called /extend-verify (e.g. checkout closed right after
+     * payment). Uses the same atomic claim as verifyExtensionPayment so the
+     * webhook and the client-side verify can never double-apply the same payment.
+     */
+    private void processWebhookExtension(Interaction interaction, String orderId, String paymentId) {
+        if (interaction.getStatus() != SessionStatus.PAID_SESSION) {
+            log.warn("Webhook: EXTENSION order {} for interaction {} in state {} — manual reconciliation required",
+                    truncateForLog(orderId), interaction.getId(), interaction.getStatus());
+            return;
+        }
+        if (paymentId == null) {
+            log.warn("Webhook: EXTENSION order {} has no paymentId — skipping", truncateForLog(orderId));
+            return;
+        }
+        if (paymentId.equals(interaction.getRazorpayPaymentId())) {
+            log.info("Webhook: extension payment {} already recorded (idempotent)", truncateForLog(paymentId));
+            return;
+        }
+
+        // Atomic claim — exactly one of {webhook, client verify} wins per payment
+        Query claimQuery = new Query(Criteria.where("_id").is(interaction.getId())
+                .and("status").is(SessionStatus.PAID_SESSION)
+                .and("razorpayPaymentId").ne(paymentId));
+        Update claimUpdate = new Update()
+                .set("razorpayPaymentId", paymentId)
+                .set("updatedAt", Instant.now());
+        Interaction claimed = mongoTemplate.findAndModify(
+                claimQuery, claimUpdate,
+                org.springframework.data.mongodb.core.FindAndModifyOptions.options().returnNew(true),
+                Interaction.class);
+
+        if (claimed == null) {
+            log.info("Webhook: extension payment {} already applied via client verify (idempotent)",
+                    truncateForLog(paymentId));
+            return;
+        }
+
+        int extensionMinutes = resolvePurchasedMinutes(orderId,
+                claimed.getRecommendedDurationMinutes() != null
+                        ? claimed.getRecommendedDurationMinutes() : 15);
+        ExpertProfile expertProfile = expertProfileRepository.findByUserId(claimed.getExpertId()).orElse(null);
+        double hourlyRate = expertProfile != null && expertProfile.getHourlyRate() != null
+                ? expertProfile.getHourlyRate() : 0.0;
+        PricingService.PriceBreakdown breakdown = pricingService.calculate(hourlyRate, extensionMinutes);
+
+        Instant currentEnd = claimed.getPaidSessionEndsAt();
+        if (currentEnd == null || currentEnd.isBefore(Instant.now())) {
+            currentEnd = Instant.now();
+        }
+        claimed.setPaidSessionEndsAt(currentEnd.plusSeconds(extensionMinutes * 60L));
+        claimed.setTotalPaidAmount((claimed.getTotalPaidAmount() != null
+                ? claimed.getTotalPaidAmount() : 0) + breakdown.clientAmountDouble());
+        claimed.setExpertAmount((claimed.getExpertAmount() != null
+                ? claimed.getExpertAmount() : 0) + breakdown.expertAmountDouble());
+        claimed.setCommissionAmount((claimed.getCommissionAmount() != null
+                ? claimed.getCommissionAmount() : 0) + breakdown.commissionAmountDouble());
+        int priorPaidMinutes = claimed.getScheduledDurationMinutes() != null
+                ? claimed.getScheduledDurationMinutes() : 0;
+        claimed.setScheduledDurationMinutes(priorPaidMinutes + extensionMinutes);
+        interactionRepository.save(claimed);
+
+        try {
+            SessionPayment sp = SessionPayment.builder()
+                    .interactionId(claimed.getId())
+                    .transactionId(paymentId)
+                    .amount(breakdown.clientAmountDouble())
+                    .expertAmount(breakdown.expertAmountDouble())
+                    .commissionAmount(breakdown.commissionAmountDouble())
+                    .chargedAt(Instant.now())
+                    .type(PaymentType.EXTENSION)
+                    .status("SUCCESS")
+                    .extensionToMinutes(extensionMinutes)
+                    .build();
+            sessionPaymentRepository.save(sp);
+        } catch (Exception e) {
+            log.error("Webhook extension SessionPayment creation failed (non-fatal): {}", e.getMessage());
+        }
+
+        socketIOEventService.broadcastSessionEvent(claimed.getId(), "session-extended", null);
+
+        Map<String, String> extMetadata = new HashMap<>();
+        extMetadata.put("paymentId", truncateForLog(paymentId));
+        extMetadata.put("extensionMinutes", String.valueOf(extensionMinutes));
+        extMetadata.put("source", "webhook");
+        auditService.record("SESSION_EXTENDED", "INTERACTION", claimed.getId(),
+                claimed.getClientId(), breakdown.clientAmountDouble(),
+                claimed.getId(), extMetadata);
+
+        notificationService.createForUser(claimed.getClientId(), "payment",
+                "Your extension payment of ₹" + breakdown.clientAmount().toPlainString()
+                        + " has been received.",
+                claimed.getId(), null);
+
+        log.info("Webhook extension applied: interactionId={} paymentId={} extMin={}",
+                claimed.getId(), truncateForLog(paymentId), extensionMinutes);
+    }
+
+    /**
+     * Reads the order type ("INITIAL" | "EXTENSION") from the Razorpay order's notes.
+     */
+    private String resolveOrderType(String razorpayOrderId) {
+        try {
+            Order order = razorpayClient.orders.fetch(razorpayOrderId);
+            if (order != null && order.has("notes")) {
+                Object notesObj = order.get("notes");
+                if (notesObj instanceof JSONObject notes && notes.has("type")) {
+                    Object type = notes.get("type");
+                    if (type instanceof String t && "EXTENSION".equalsIgnoreCase(t)) {
+                        return "EXTENSION";
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not read type from Razorpay order {} — assuming INITIAL", truncateForLog(razorpayOrderId));
+        }
+        return "INITIAL";
     }
 
     /** Truncates payment ID for safe logging (never logs full identifiers). */

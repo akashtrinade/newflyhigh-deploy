@@ -1,7 +1,7 @@
 import { useState, type ComponentType } from "react"
 import { Link, useLocation } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
-import { ChevronLeft, ChevronRight, LogOut, Plane, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, LogOut, X } from "lucide-react"
 import {
   Sheet,
   SheetContent,
@@ -152,10 +152,6 @@ export function Sidebar({
   collapsed,
   onToggleCollapse,
 }: SidebarProps) {
-  const logoGradient = isExpert
-    ? "bg-gradient-to-br from-[#2563EB] to-[#7C3AED] shadow-sm"
-    : "bg-slate-950"
-
   const sidebarWidth = collapsed ? "w-[68px]" : isExpert ? "w-64" : "w-72"
   const homeHref = isExpert ? "/expert/dashboard" : "/client-dashboard"
 
@@ -182,7 +178,6 @@ export function Sidebar({
         )}
       >
         <SidebarContent
-          logoGradient={logoGradient}
           homeHref={homeHref}
           user={user}
           navItems={navItems}
@@ -203,7 +198,6 @@ export function Sidebar({
           </SheetTrigger>
           <SheetContent side="left" className="w-72 bg-white p-0" showCloseButton={false}>
             <SidebarContent
-              logoGradient={logoGradient}
               homeHref={homeHref}
               user={user}
               navItems={navItems}
@@ -224,7 +218,6 @@ export function Sidebar({
 // ── Shared sidebar internals ──
 
 function SidebarContent({
-  logoGradient,
   homeHref,
   user,
   navItems,
@@ -235,7 +228,6 @@ function SidebarContent({
   collapsed,
   onToggleCollapse,
 }: {
-  logoGradient: string
   homeHref: string
   user: AuthUser | null
   navItems: SidebarNavItem[]
@@ -262,20 +254,14 @@ function SidebarContent({
             collapsed && "justify-center",
           )}
         >
-          <span
+          <img
+            src="/images/logo.png"
+            alt="FlyHigh"
             className={cn(
-              "flex shrink-0 items-center justify-center rounded-lg transition-all duration-300",
-              isExpert ? "size-8" : "size-9",
-              logoGradient,
+              "h-8 w-auto object-contain",
+              collapsed && "h-7",
             )}
-          >
-            <Plane className="size-4 text-white" />
-          </span>
-          {!collapsed && (
-            <span className="whitespace-nowrap text-lg font-bold tracking-tight text-[var(--flyhigh-text)]">
-              FlyHigh
-            </span>
-          )}
+          />
         </Link>
 
         {/* Mobile close (always visible on mobile) + Desktop collapse toggle */}

@@ -10,20 +10,35 @@ import {
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
+import type { FeaturedExpert } from "@/types/public-stats"
 
-const liveExperts = [
+const fallbackLiveExperts = [
   { initials: "PS", name: "Priya", role: "Legal", color: "from-indigo-500 to-violet-600" },
   { initials: "AM", name: "Arjun", role: "Finance", color: "from-emerald-500 to-teal-600" },
   { initials: "NK", name: "Neha", role: "Medical", color: "from-rose-500 to-pink-600" },
 ] as const
 
-const activityFeed = [
+const fallbackActivityFeed = [
   { text: "Rahul booked Legal consult", time: "2m ago", dot: "bg-emerald-500" },
   { text: "Issue resolved — Tax filing", time: "5m ago", dot: "bg-sky-500" },
   { text: "⭐ 5.0 session completed", time: "8m ago", dot: "bg-amber-500" },
 ] as const
 
-export function HeroVisual() {
+interface HeroVisualProps {
+  heroExpert?: FeaturedExpert | null
+  liveExperts?: { initials: string; name: string; role: string; color: string }[] | null
+  onlineCount?: number | null
+}
+
+export function HeroVisual({ heroExpert, liveExperts, onlineCount }: HeroVisualProps) {
+  const expertName = heroExpert?.name ?? "Dr. Priya Sharma"
+  const expertInitials = heroExpert?.initials ?? "PS"
+  const expertCategory = heroExpert?.category ?? "Legal Expert"
+  const expertRate = heroExpert?.hourlyRate ?? 800
+  const expertRating = heroExpert?.rating ?? 4.9
+  const expertSessions = heroExpert?.reviewCount ?? 500
+  const displayLiveExperts = liveExperts ?? fallbackLiveExperts
+  const displayOnlineCount = onlineCount ?? 12
   return (
     <div className="hero-reveal hero-reveal-delay-4 relative mx-auto w-full max-w-[420px] lg:mx-0 lg:ml-auto">
       {/* Glow behind composition */}
@@ -56,7 +71,7 @@ export function HeroVisual() {
                   />
                   <Avatar className="relative size-16 border-2 border-white/20">
                     <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-violet-600 text-lg font-bold text-white">
-                      PS
+                      {expertInitials}
                     </AvatarFallback>
                   </Avatar>
                   <span className="absolute -right-0.5 -bottom-0.5 flex size-5 items-center justify-center rounded-full bg-emerald-500 ring-2 ring-slate-900">
@@ -64,9 +79,9 @@ export function HeroVisual() {
                   </span>
                 </div>
                 <p className="mt-3 text-sm font-bold text-white">
-                  Dr. Priya Sharma
+                  {expertName}
                 </p>
-                <p className="text-xs text-indigo-300">Legal Expert</p>
+                <p className="text-xs text-indigo-300">{expertCategory}</p>
 
                 {/* Audio waveform */}
                 <div className="mt-4 flex h-8 items-end justify-center gap-1">
@@ -109,11 +124,11 @@ export function HeroVisual() {
                   Per hour
                 </p>
                 <p className="mt-0.5 text-2xl font-bold text-[var(--flyhigh-text)]">
-                  ₹800
+                  ₹{expertRate}
                 </p>
                 <div className="mt-2 flex items-center gap-1 text-xs font-medium text-slate-600">
                   <Star className="size-3 fill-amber-400 text-amber-400" />
-                  4.9 · 500+ sessions
+                  {expertRating} · {expertSessions}+ sessions
                 </div>
               </div>
 
@@ -139,7 +154,7 @@ export function HeroVisual() {
                 Live Activity
               </p>
               <div className="space-y-2">
-                {activityFeed.map((item) => (
+                {fallbackActivityFeed.map((item) => (
                   <div
                     key={item.text}
                     className="flex items-center justify-between gap-2"
@@ -163,7 +178,7 @@ export function HeroVisual() {
             {/* Expert avatars row */}
             <div className="col-span-12 flex items-center justify-between rounded-2xl border border-slate-100 bg-white px-3.5 py-2.5">
               <div className="flex -space-x-2">
-                {liveExperts.map((expert) => (
+                {displayLiveExperts.map((expert) => (
                   <Avatar
                     key={expert.initials}
                     className="size-8 ring-2 ring-white"
@@ -179,7 +194,7 @@ export function HeroVisual() {
                   </Avatar>
                 ))}
                 <div className="flex size-8 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-500 ring-2 ring-white">
-                  +12
+                  +{displayOnlineCount}
                 </div>
               </div>
               <p className="text-xs font-semibold text-slate-600">

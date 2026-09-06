@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import { Tabs as TabsPrimitive } from "radix-ui"
-import { CalendarCheck, MessageSquareText } from "lucide-react"
+import { CalendarCheck, IndianRupee, MessageSquareText } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { fetchCallHistory, type CallHistoryItem } from "@/lib/call-requests"
 import { SessionListItem } from "@/shared/components/molecules/SessionListItem"
 import { StatCard } from "@/shared/components/molecules/StatCard"
+
+const INR_FORMAT = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 0, maximumFractionDigits: 0 })
 
 // ── Constants ──
 
@@ -18,11 +20,16 @@ const tabs: SessionStatus[] = ["Completed", "Cancelled"]
 function computeStats(sessions: CallHistoryItem[]) {
   const completed = sessions.filter(
     (s) => s.status.toUpperCase() === "COMPLETED",
-  ).length
+  )
+  const totalEarned = completed.reduce(
+    (sum, s) => sum + (s.expertAmount ?? 0),
+    0,
+  )
 
   return {
     total: sessions.length,
-    completed,
+    completed: completed.length,
+    totalEarned,
   }
 }
 
@@ -77,7 +84,7 @@ export default function ExpertSessionsPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid gap-4 sm:grid-cols-2"
+          className="grid gap-4 sm:grid-cols-3"
         >
           <StatCard
             label="Total Sessions"
@@ -90,6 +97,12 @@ export default function ExpertSessionsPage() {
             value={isLoading ? "..." : String(stats.completed)}
             icon={MessageSquareText}
             color="bg-emerald-50 text-emerald-600"
+          />
+          <StatCard
+            label="Total Earned"
+            value={isLoading ? "..." : INR_FORMAT.format(stats.totalEarned)}
+            icon={IndianRupee}
+            color="bg-amber-50 text-amber-600"
           />
         </motion.div>
 
@@ -149,6 +162,7 @@ export default function ExpertSessionsPage() {
                           <SessionListItem
                             key={session.id}
                             session={session}
+                            showEarning
                           />
                         ))
                       ) : (

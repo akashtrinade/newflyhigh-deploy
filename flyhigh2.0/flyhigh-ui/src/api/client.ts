@@ -12,22 +12,75 @@ export const axiosInstance: AxiosInstance = axios.create({
   headers: { "Content-Type": "application/json" },
 })
 
+// ── 401 handling: refresh access token once, then retry the original request ──
+// Sessions run longer than the 15-min access token; without this, the 2s
+// session-state poll starts 401ing mid-call and the session never completes.
+
+interface RetriableRequestConfig extends AxiosRequestConfig {
+  _retried?: boolean
+  skipAuthRefresh?: boolean
+}
+
+let refreshPromise: Promise<boolean> | null = null
+
+function refreshTokens(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = axiosInstance
+      .post("/auth/refresh", undefined, { skipAuthRefresh: true } as RetriableRequestConfig)
+      .then(() => true)
+      .catch(() => false)
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+  return refreshPromise
+}
+
 // ── Response interceptor: unwrap data, normalize errors ──
 
 axiosInstance.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (axios.isAxiosError(error) && error.response) {
-      const { status, data } = error.response
-      const message =
-        data && typeof data === "object" && "message" in data
-          ? (data as { message: string }).message
-          : error.message
-      return Promise.reject(new ApiError(message, status, data))
+  async (error) => {
+    const original = (error.config ?? {}) as RetriableRequestConfig
+
+    // Attempt a single refresh + retry for auth expiry (not for auth endpoints themselves)
+    if (
+      axios.isAxiosError(error) &&
+      error.response?.status === 401 &&
+      original &&
+      !original._retried &&
+      !original.skipAuthRefresh &&
+      !(original.url ?? "").includes("/auth/")
+    ) {
+      original._retried = true
+      const refreshed = await refreshTokens()
+      if (refreshed) {
+        try {
+          return await axiosInstance(original)
+        } catch (retryError) {
+          return Promise.reject(normalizeError(retryError))
+        }
+      }
     }
-    return Promise.reject(new ApiError(error.message ?? "Network error", 0))
+
+    return Promise.reject(normalizeError(error))
   },
 )
+
+function normalizeError(error: unknown): ApiError {
+  if (axios.isAxiosError(error) && error.response) {
+    const { status, data } = error.response
+    const message =
+      data && typeof data === "object" && "message" in data
+        ? (data as { message: string }).message
+        : error.message
+    return new ApiError(message, status, data)
+  }
+  return new ApiError(
+    error instanceof Error ? error.message : "Network error",
+    0,
+  )
+}
 
 // ── Error class ──
 

@@ -1,5 +1,15 @@
 # CLAUDE.md — FlyHigh 2.0 (Root)
 
+## Recent Changes (Aug 17, 2026)
+
+- **Security/authorization**: all payment & session endpoints enforce ownership (client/expert/participant) with 403s; payments bound to the session's own Razorpay order; admin has no default credentials (fail-fast without `ADMIN_EMAIL`/`ADMIN_PASSWORD`).
+- **Payment recovery**: verify accepts expired/completed-unpaid sessions; webhook applies EXTENSION orders; extension verify atomic + idempotent; cumulative paid-time tracking (`scheduledDurationMinutes`).
+- **Notifications**: backend now writes in-app notifications (call request/response, payment confirmations) — previously a dead feature.
+- **UI**: 401 token refresh mid-call, extension "Retry Verification", working Leave Feedback flow, Book Session buttons wired, socket reconnect re-joins call room + disconnect banner, Terms & Privacy pages at `/terms` and `/privacy`.
+- **Admin API**: list endpoints return `{content, totalPages, totalElements, page}` (UI contract fixed).
+- **Search**: price filter (₹ labels) and rating filter now functional.
+- **Refunds**: require a COMPLETED session.
+
 ## Project Overview
 
 Three-tier monorepo for a video-consultation marketplace connecting clients with experts.

@@ -102,4 +102,27 @@ declare global {
   }
 }
 
+// ── Payment History Types ──
+
+export interface PaymentHistoryItem {
+  id: string
+  interactionId: string
+  expertName: string
+  expertId: string | null
+  sessionDate: string
+  duration: number
+  totalPaidAmount: number
+  sessionStatus: string
+  paymentStatus: string
+  razorpayPaymentId: string | null
+  paymentType: string | null
+}
+
+export interface PaymentHistoryPage {
+  content: PaymentHistoryItem[]
+  totalElements: number
+  totalPages: number
+  page: number
+}
+
 export {}

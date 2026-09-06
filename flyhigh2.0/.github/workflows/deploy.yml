@@ -10,6 +10,7 @@ on:
       environment:
         description: 'Target environment'
         required: true
+        default: 'staging'
         type: choice
         options:
           - staging
@@ -69,6 +70,8 @@ jobs:
             build: npm ci
             # Syntax check + basic functional test for signaling server
             test: |
+              node --check server.js
+              node --check lambda.js
               node -e "
                 const { handler } = require('./lambda.js');
                 if (typeof handler !== 'function') {
@@ -76,7 +79,6 @@ jobs:
                   process.exit(1);
                 }
                 console.log('OK: lambda.js exports handler function');
-                console.log('OK: server.js parses without syntax errors');
               "
             upload-name: ''  # signaling is deployed via CDK from source
 
@@ -128,6 +130,14 @@ jobs:
         working-directory: infra
         run: npm ci
 
+      # app-stack.ts references the backend JAR via Code.fromAsset at synth time —
+      # without the artifact the synth (and thus the diff) fails.
+      - name: Download backend JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-jar
+          path: flyhigh-backend/target/
+
       - name: Type-check CDK
         working-directory: infra
         run: npx tsc --noEmit
@@ -169,11 +179,13 @@ jobs:
   # ═══════════════════════════════════════════════════════════
   # Stage 3: Deploy Staging
   # ═══════════════════════════════════════════════════════════
+  # Runs on push to main OR an explicit workflow_dispatch targeting staging.
   deploy-staging:
     name: Deploy Staging
     runs-on: ubuntu-latest
     needs: [build-and-test]
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
     environment:
       name: staging
       url: https://staging.flyhigh.com
@@ -242,26 +254,55 @@ jobs:
             --distribution-id ${{ steps.outputs.outputs.distribution }} \
             --paths "/*"
 
-      - name: Smoke Test
+      - name: Smoke Test (SPA + API + WebSocket)
+        env:
+          SPA_URL: https://staging.flyhigh.com/
+          API_URL: https://api.staging.flyhigh.com/api/health
+          WS_URL: https://ws.staging.flyhigh.com/
         run: |
           echo "Waiting for CloudFront propagation (30s)..."
           sleep 30
-          # Test the CloudFront SPA endpoint
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --retry 5 --retry-delay 10 https://staging.flyhigh.com/ || echo "000")
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "SMOKE TEST FAILED: CloudFront returned HTTP $HTTP_CODE"
+
+          echo "── SPA (CloudFront) ──"
+          SPA_CODE=$(curl -s -o /dev/null -w "%{http_code}" --retry 5 --retry-delay 10 "$SPA_URL" || echo "000")
+          if [ "$SPA_CODE" != "200" ]; then
+            echo "SMOKE TEST FAILED: SPA returned HTTP $SPA_CODE"
             exit 1
           fi
-          echo "SMOKE TEST PASSED: CloudFront returns HTTP $HTTP_CODE"
+          echo "OK: SPA returns HTTP $SPA_CODE"
+
+          echo "── Backend API (/health) ──"
+          API_CODE=$(curl -s -o /dev/null -w "%{http_code}" --retry 5 --retry-delay 10 "$API_URL" || echo "000")
+          if [ "$API_CODE" != "200" ]; then
+            echo "SMOKE TEST FAILED: API health returned HTTP $API_CODE"
+            exit 1
+          fi
+          echo "OK: API health returns HTTP $API_CODE"
+
+          echo "── Signaling WebSocket endpoint (TLS reachability) ──"
+          WS_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$WS_URL" || echo "000")
+          # API Gateway WebSocket returns 403/426 (not 000) for non-WS requests —
+          # any real HTTP code means the TLS handshake + endpoint are reachable.
+          if [ "$WS_CODE" = "000" ]; then
+            echo "SMOKE TEST FAILED: WebSocket endpoint unreachable (HTTP $WS_CODE)"
+            exit 1
+          fi
+          echo "OK: WebSocket endpoint reachable (HTTP $WS_CODE)"
+
+          echo "SMOKE TEST PASSED"
 
   # ═══════════════════════════════════════════════════════════
   # Stage 4: Deploy Production
   # ═══════════════════════════════════════════════════════════
+  # Runs on push to main (after staging) OR an explicit workflow_dispatch
+  # targeting production. The `environment: production` block enforces any
+  # required reviewers/approvals configured on the production environment.
   deploy-production:
     name: Deploy Production
     runs-on: ubuntu-latest
     needs: [deploy-staging]
-    if: github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
     environment:
       name: production
       url: https://flyhigh.com
@@ -329,14 +370,37 @@ jobs:
             --distribution-id ${{ steps.outputs.outputs.distribution }} \
             --paths "/*"
 
-      - name: Smoke Test
+      - name: Smoke Test (SPA + API + WebSocket)
+        env:
+          SPA_URL: https://flyhigh.com/
+          API_URL: https://api.flyhigh.com/api/health
+          WS_URL: https://ws.flyhigh.com/
         run: |
           echo "Waiting for CloudFront propagation (30s)..."
           sleep 30
-          # Test the CloudFront SPA endpoint
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --retry 5 --retry-delay 10 https://flyhigh.com/ || echo "000")
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "SMOKE TEST FAILED: CloudFront returned HTTP $HTTP_CODE"
+
+          echo "── SPA (CloudFront) ──"
+          SPA_CODE=$(curl -s -o /dev/null -w "%{http_code}" --retry 5 --retry-delay 10 "$SPA_URL" || echo "000")
+          if [ "$SPA_CODE" != "200" ]; then
+            echo "SMOKE TEST FAILED: SPA returned HTTP $SPA_CODE"
             exit 1
           fi
-          echo "SMOKE TEST PASSED: CloudFront returns HTTP $HTTP_CODE"
+          echo "OK: SPA returns HTTP $SPA_CODE"
+
+          echo "── Backend API (/health) ──"
+          API_CODE=$(curl -s -o /dev/null -w "%{http_code}" --retry 5 --retry-delay 10 "$API_URL" || echo "000")
+          if [ "$API_CODE" != "200" ]; then
+            echo "SMOKE TEST FAILED: API health returned HTTP $API_CODE"
+            exit 1
+          fi
+          echo "OK: API health returns HTTP $API_CODE"
+
+          echo "── Signaling WebSocket endpoint (TLS reachability) ──"
+          WS_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$WS_URL" || echo "000")
+          if [ "$WS_CODE" = "000" ]; then
+            echo "SMOKE TEST FAILED: WebSocket endpoint unreachable (HTTP $WS_CODE)"
+            exit 1
+          fi
+          echo "OK: WebSocket endpoint reachable (HTTP $WS_CODE)"
+
+          echo "SMOKE TEST PASSED"

@@ -1,5 +1,16 @@
 # CLAUDE.md — FlyHigh Backend
 
+## Recent Changes (Aug 17, 2026)
+
+- **Authorization pass**: payment verify (client-only + order binding), call respond/end/status/rating, pending calls, pending feedback, expert email/status — all enforce ownership; violations return 403.
+- **Payment recovery**: verify accepts `FREE_SESSION_EXPIRED` / completed-unpaid sessions (no more captured-but-dead 409); webhook handles EXTENSION orders (atomic claim, grants minutes, ledger row); extension verify is atomic + idempotent.
+- **Paid-time correctness**: `scheduledDurationMinutes` tracks cumulative purchased minutes; elapsed/total paid time and `actualDurationMinutes` stay correct after extensions; purchased minutes bound to the paid Razorpay order's notes.
+- **Notifications**: new `NotificationService` writes in-app notifications (call request → expert, accept/decline → client, payment/extension confirmations → client).
+- **Admin**: `AdminInitializer` fails fast without `ADMIN_EMAIL`/`ADMIN_PASSWORD` (no default creds; dev values in `application-dev.yml`); `/admin` list endpoints return `{content, totalPages, totalElements, page}`; client/expert lists use DB-level `findByRole` pagination; `AdminUserDto` includes firstName/lastName/status.
+- **Search**: price filter matches INR labels (Under ₹500 / ₹500-₹1000 / ₹1000+); rating filter implemented on `averageRating`.
+- **Presence (Aug 18)**: availability filter pushed down to the DB query before pagination (fixes empty "Online Experts" — it previously only checked the already-paginated page); heartbeat window configurable via `app.presence.online-window-seconds` (default 120s, dev profile 3600s); `DevDataSeeder` refreshes seeded experts' heartbeats on startup.
+- **Refunds**: require a COMPLETED session; concurrent duplicate earning creation handled gracefully (unique index).
+
 ## Build & Run
 
 ```bash
@@ -99,7 +110,7 @@ Configurable via `mongo.pool.*` and `mongo.timeout.*` in application.properties.
 
 10. **Rating average is atomic** — computed from CallRequest reviews (source of truth) via `findAndModify`. No read-modify-write race condition.
 
-11. **Expert search uses DB-level pagination** — `skip/limit` applied at MongoDB query level. Post-filters (text search, availability) run only on the paginated page.
+11. **Expert search uses DB-level pagination** — `skip/limit` applied at MongoDB query level. The text-search post-filter (`q`) runs only on the paginated page; the availability filter is pushed down to the DB query (`isOnline` + heartbeat window) so pagination sees only matching experts.
 
 12. **Earnings queries are batch-optimized** — interactions and users are loaded in 2 queries regardless of page size (was N+1).
 

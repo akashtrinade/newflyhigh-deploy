@@ -1,4 +1,4 @@
-import { Plane } from "lucide-react"
+
 import type { ReactNode } from "react"
 
 import { Separator } from "@/components/ui/separator"
@@ -68,10 +68,11 @@ export function Footer() {
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           <div className="sm:col-span-2 lg:col-span-1">
             <a href="#home" className="flex items-center gap-2">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--flyhigh-primary)] to-[var(--flyhigh-primary-hover)]">
-                <Plane className="size-4 text-white" aria-hidden="true" />
-              </div>
-              <span className="text-lg font-semibold">FlyHigh</span>
+              <img
+                src="/images/logo.png"
+                alt="FlyHigh"
+                className="h-8 w-auto brightness-0 invert"
+              />
             </a>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/50">
               The trusted marketplace for expert consultations. Connect with
@@ -115,13 +116,13 @@ export function Footer() {
         <div className="flex flex-col items-center justify-between gap-4 text-sm text-white/40 sm:flex-row">
           <p>&copy; {new Date().getFullYear()} FlyHigh. All rights reserved.</p>
           <div className="flex gap-6">
-            <a href="#" className="transition-colors hover:text-white/70">
+            <a href="/terms" className="transition-colors hover:text-white/70">
               Terms of Service
             </a>
-            <a href="#" className="transition-colors hover:text-white/70">
+            <a href="/privacy" className="transition-colors hover:text-white/70">
               Privacy Policy
             </a>
-            <a href="#" className="transition-colors hover:text-white/70">
+            <a href="/privacy" className="transition-colors hover:text-white/70">
               Cookies
             </a>
           </div>

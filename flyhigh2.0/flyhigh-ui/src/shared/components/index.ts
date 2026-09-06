@@ -1,4 +1,5 @@
 // Atoms
+export { Logo } from "./atoms/Logo"
 export { LoadingSpinner, InlineSpinner } from "./atoms/LoadingSpinner"
 export { ErrorAlert, AnimatedErrorBanner } from "./atoms/ErrorAlert"
 export { EmptyState } from "./atoms/EmptyState"

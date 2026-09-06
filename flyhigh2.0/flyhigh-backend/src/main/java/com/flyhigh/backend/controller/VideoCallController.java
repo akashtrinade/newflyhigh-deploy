@@ -45,6 +45,16 @@ public class VideoCallController {
     }
 
     /**
+     * Resolves the authenticated user, or null if unauthenticated.
+     */
+    private User authenticatedUser(Authentication authentication) {
+        if (authentication == null) {
+            return null;
+        }
+        return authService.getUserByEmail(authentication.getName());
+    }
+
+    /**
      * Client initiates a call request to an expert.
      */
     @PostMapping("/request")
@@ -80,23 +90,23 @@ public class VideoCallController {
     @PostMapping("/respond")
     public ResponseEntity<?> respondToCall(Authentication authentication,
                                             @Valid @RequestBody CallActionRequest request) {
-        if (authentication == null) {
+        User caller = authenticatedUser(authentication);
+        if (caller == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
         try {
-            CallRequestDto dto = videoCallService.respondToCall(request);
+            CallRequestDto dto = videoCallService.respondToCall(request, caller.getId());
 
             // If accepted, set expert status to BUSY
             if ("ACCEPT".equalsIgnoreCase(request.getAction())) {
-                String expertEmail = authentication.getName();
-                User expert = authService.getUserByEmail(expertEmail);
-                if (expert != null) {
-                    videoCallService.setExpertStatus(expert.getId(), "BUSY");
-                }
+                videoCallService.setExpertStatus(caller.getId(), "BUSY");
             }
 
             return ResponseEntity.ok(dto);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new MessageResponse(false, e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new MessageResponse(false, e.getMessage()));
         } catch (IllegalStateException e) {
@@ -111,12 +121,16 @@ public class VideoCallController {
     @GetMapping("/status/{callRequestId}")
     public ResponseEntity<?> getCallStatus(Authentication authentication,
                                            @PathVariable String callRequestId) {
-        if (authentication == null) {
+        User caller = authenticatedUser(authentication);
+        if (caller == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         try {
-            CallRequestDto dto = videoCallService.getCallRequestStatus(callRequestId);
+            CallRequestDto dto = videoCallService.getCallRequestStatus(callRequestId, caller.getId());
             return ResponseEntity.ok(dto);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new MessageResponse(false, e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new MessageResponse(false, e.getMessage()));
         }
@@ -129,11 +143,17 @@ public class VideoCallController {
     @GetMapping("/pending/{expertId}")
     public ResponseEntity<?> getPendingCall(Authentication authentication,
                                             @PathVariable String expertId) {
-        if (authentication == null) {
+        User caller = authenticatedUser(authentication);
+        if (caller == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        CallRequestDto dto = videoCallService.getPendingCallForExpert(expertId);
-        return ResponseEntity.ok(dto != null ? dto : new java.util.HashMap<>());
+        try {
+            CallRequestDto dto = videoCallService.getPendingCallForExpert(expertId, caller.getId());
+            return ResponseEntity.ok(dto != null ? dto : new java.util.HashMap<>());
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new MessageResponse(false, e.getMessage()));
+        }
     }
 
     /**
@@ -158,7 +178,8 @@ public class VideoCallController {
     @PostMapping("/end")
     public ResponseEntity<?> endCall(Authentication authentication,
                                       @RequestBody Map<String, String> body) {
-        if (authentication == null) {
+        User caller = authenticatedUser(authentication);
+        if (caller == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
@@ -168,16 +189,17 @@ public class VideoCallController {
         }
 
         try {
-            CallRequestDto dto = videoCallService.endCall(callRequestId);
+            CallRequestDto dto = videoCallService.endCall(callRequestId, caller.getId());
 
             // Set expert back to ONLINE after call ends
-            String userEmail = authentication.getName();
-            User user = authService.getUserByEmail(userEmail);
-            if (user != null && "EXPERT".equalsIgnoreCase(user.getRole())) {
-                videoCallService.setExpertStatus(user.getId(), "ONLINE");
+            if ("EXPERT".equalsIgnoreCase(caller.getRole())) {
+                videoCallService.setExpertStatus(caller.getId(), "ONLINE");
             }
 
             return ResponseEntity.ok(dto);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new MessageResponse(false, e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new MessageResponse(false, e.getMessage()));
         }
@@ -190,14 +212,20 @@ public class VideoCallController {
     @PostMapping("/rating")
     public ResponseEntity<?> submitRating(Authentication authentication,
                                            @Valid @RequestBody RatingRequest request) {
-        if (authentication == null) {
+        User caller = authenticatedUser(authentication);
+        if (caller == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         try {
-            CallRequestDto dto = videoCallService.submitRating(request);
+            CallRequestDto dto = videoCallService.submitRating(request, caller.getId());
             return ResponseEntity.ok(dto);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new MessageResponse(false, e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new MessageResponse(false, e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(new MessageResponse(false, e.getMessage()));
         }
     }
 
@@ -225,8 +253,18 @@ public class VideoCallController {
     public ResponseEntity<MessageResponse> setExpertStatus(Authentication authentication,
                                                             @PathVariable String userId,
                                                             @RequestBody Map<String, String> body) {
-        if (authentication == null) {
+        User caller = authenticatedUser(authentication);
+        if (caller == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        // Authorization: an expert may only set their OWN status
+        if (!caller.getId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new MessageResponse(false, "You can only update your own expert status"));
+        }
+        if (!"EXPERT".equalsIgnoreCase(caller.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new MessageResponse(false, "Only experts can update expert status"));
         }
         String status = body.get("status");
         if (status == null || (!"BUSY".equals(status) && !"ONLINE".equals(status))) {
@@ -243,8 +281,15 @@ public class VideoCallController {
     @GetMapping("/pending-feedback/{clientEmail}")
     public ResponseEntity<?> getPendingFeedback(Authentication authentication,
                                                 @PathVariable String clientEmail) {
-        if (authentication == null) {
+        User caller = authenticatedUser(authentication);
+        if (caller == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        // Authorization: only the client themselves (or an admin) may see their pending feedback
+        if (!caller.getEmail().equalsIgnoreCase(clientEmail)
+                && !"ADMIN".equalsIgnoreCase(caller.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new MessageResponse(false, "You can only view your own pending feedback"));
         }
         List<CallRequestDto> pending = videoCallService.getPendingFeedbackForClient(clientEmail);
         return ResponseEntity.ok(pending != null ? pending : List.of());
@@ -257,11 +302,12 @@ public class VideoCallController {
     @GetMapping("/session/{callRequestId}")
     public ResponseEntity<?> getSessionByCallRequest(Authentication authentication,
                                                       @PathVariable String callRequestId) {
-        if (authentication == null) {
+        User caller = authenticatedUser(authentication);
+        if (caller == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         try {
-            CallRequestDto dto = videoCallService.getCallRequestStatus(callRequestId);
+            CallRequestDto dto = videoCallService.getCallRequestStatus(callRequestId, caller.getId());
             if (dto.getInteractionId() == null) {
                 return ResponseEntity.ok(Map.of(
                     "success", true,
@@ -275,6 +321,9 @@ public class VideoCallController {
                 "callRequestId", callRequestId,
                 "status", dto.getStatus()
             ));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new MessageResponse(false, e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new MessageResponse(false, e.getMessage()));
         }
@@ -287,13 +336,74 @@ public class VideoCallController {
     @GetMapping("/expert/{userId}/email")
     public ResponseEntity<?> getExpertEmail(Authentication authentication,
                                             @PathVariable String userId) {
-        if (authentication == null) {
+        User caller = authenticatedUser(authentication);
+        if (caller == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        // Authorization: only clients (connecting to an expert) or admins may look up expert emails
+        if (!"CLIENT".equalsIgnoreCase(caller.getRole())
+                && !"ADMIN".equalsIgnoreCase(caller.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new MessageResponse(false, "Only clients can look up expert emails"));
         }
         User user = authService.getUserById(userId);
         if (user == null) {
             return ResponseEntity.badRequest().body(new MessageResponse(false, "Expert not found"));
         }
+        // The target must actually be an expert — never expose non-expert emails
+        if (!"EXPERT".equalsIgnoreCase(user.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new MessageResponse(false, "Requested user is not an expert"));
+        }
         return ResponseEntity.ok(Map.of("email", user.getEmail()));
+    }
+
+    /**
+     * Get all reviews for the authenticated expert's dashboard.
+     * Expert-only — returns full review details including any expert responses.
+     */
+    @GetMapping("/my-reviews")
+    public ResponseEntity<?> getMyReviews(Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        User user = authService.getUserByEmail(authentication.getName());
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (!"EXPERT".equalsIgnoreCase(user.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new MessageResponse(false, "Only experts can view their reviews"));
+        }
+        List<ExpertReviewResponse> reviews = videoCallService.getExpertReviews(user.getId());
+        return ResponseEntity.ok(reviews);
+    }
+
+    /**
+     * Expert submits a response/acknowledgment to a client review.
+     * Expert-only — response is immutable once submitted.
+     */
+    @PostMapping("/review-response")
+    public ResponseEntity<?> submitReviewResponse(Authentication authentication,
+                                                   @Valid @RequestBody ExpertReviewRequest request) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        User user = authService.getUserByEmail(authentication.getName());
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (!"EXPERT".equalsIgnoreCase(user.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new MessageResponse(false, "Only experts can respond to reviews"));
+        }
+        try {
+            ExpertReviewResponse response = videoCallService.submitReviewResponse(request, user.getId());
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(false, e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(new MessageResponse(false, e.getMessage()));
+        }
     }
 }

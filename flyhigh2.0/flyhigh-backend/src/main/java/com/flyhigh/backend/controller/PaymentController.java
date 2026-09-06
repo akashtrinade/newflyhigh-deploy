@@ -3,7 +3,10 @@ package com.flyhigh.backend.controller;
 import com.flyhigh.backend.dto.*;
 import com.flyhigh.backend.exception.InvalidSessionStateException;
 import com.flyhigh.backend.exception.PaymentVerificationException;
-import com.flyhigh.backend.model.User;
+import com.flyhigh.backend.model.*;
+import com.flyhigh.backend.repository.InteractionRepository;
+import com.flyhigh.backend.repository.SessionPaymentRepository;
+import com.flyhigh.backend.repository.UserRepository;
 import com.flyhigh.backend.service.AuthService;
 import com.flyhigh.backend.service.PaymentService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,7 +18,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Payment Controller — handles Razorpay order creation, payment verification,
@@ -33,10 +40,19 @@ public class PaymentController {
 
     private final PaymentService paymentService;
     private final AuthService authService;
+    private final InteractionRepository interactionRepository;
+    private final SessionPaymentRepository sessionPaymentRepository;
+    private final UserRepository userRepository;
 
-    public PaymentController(PaymentService paymentService, AuthService authService) {
+    public PaymentController(PaymentService paymentService, AuthService authService,
+                             InteractionRepository interactionRepository,
+                             SessionPaymentRepository sessionPaymentRepository,
+                             UserRepository userRepository) {
         this.paymentService = paymentService;
         this.authService = authService;
+        this.interactionRepository = interactionRepository;
+        this.sessionPaymentRepository = sessionPaymentRepository;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -78,7 +94,7 @@ public class PaymentController {
         } catch (Exception e) {
             log.error("Order creation error: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                    .body(new MessageResponse(false, "Payment gateway error: " + e.getMessage()));
+                    .body(new MessageResponse(false, "Payment gateway error. Please try again."));
         }
     }
 
@@ -91,10 +107,17 @@ public class PaymentController {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        User user = authService.getUserByEmail(authentication.getName());
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
         try {
-            SessionStateResponse state = paymentService.verifyAndConfirmPayment(request);
+            SessionStateResponse state = paymentService.verifyAndConfirmPayment(request, user.getId());
             return ResponseEntity.ok(state);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new MessageResponse(false, e.getMessage()));
         } catch (PaymentVerificationException e) {
             return ResponseEntity.badRequest().body(new MessageResponse(false, e.getMessage()));
         } catch (InvalidSessionStateException e) {
@@ -104,7 +127,7 @@ public class PaymentController {
             return ResponseEntity.badRequest().body(new MessageResponse(false, e.getMessage()));
         } catch (Exception e) {
             log.error("Payment verification error: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(new MessageResponse(false, e.getMessage()));
+            return ResponseEntity.badRequest().body(new MessageResponse(false, "Payment could not be verified. Please try again."));
         }
     }
 
@@ -136,7 +159,7 @@ public class PaymentController {
         } catch (Exception e) {
             log.error("Extension order error: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                    .body(new MessageResponse(false, "Payment gateway error: " + e.getMessage()));
+                    .body(new MessageResponse(false, "Payment gateway error. Please try again."));
         }
     }
 
@@ -149,13 +172,20 @@ public class PaymentController {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        User user = authService.getUserByEmail(authentication.getName());
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
         try {
-            SessionStateResponse state = paymentService.verifyExtensionPayment(request);
+            SessionStateResponse state = paymentService.verifyExtensionPayment(request, user.getId());
             return ResponseEntity.ok(state);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new MessageResponse(false, e.getMessage()));
         } catch (Exception e) {
             log.error("Extension verification error: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(new MessageResponse(false, e.getMessage()));
+            return ResponseEntity.badRequest().body(new MessageResponse(false, "Payment could not be verified. Please try again."));
         }
     }
 
@@ -169,9 +199,16 @@ public class PaymentController {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        User user = authService.getUserByEmail(authentication.getName());
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         try {
-            SessionStateResponse state = paymentService.getSessionState(interactionId);
+            SessionStateResponse state = paymentService.getSessionStateAuthorized(interactionId, user.getId());
             return ResponseEntity.ok(state);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new MessageResponse(false, e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new MessageResponse(false, e.getMessage()));
         }
@@ -203,14 +240,126 @@ public class PaymentController {
     }
 
     /**
-     * Get payment history for the authenticated user.
+     * Get payment history for the authenticated client.
+     * Returns paginated list of payments with expert names, amounts, and session status.
      */
     @GetMapping("/history")
-    public ResponseEntity<?> getPaymentHistory(Authentication authentication) {
+    public ResponseEntity<?> getPaymentHistory(Authentication authentication,
+                                               @RequestParam(defaultValue = "0") int page,
+                                               @RequestParam(defaultValue = "10") int size) {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        // Future: implement payment history
-        return ResponseEntity.ok(java.util.List.of());
+        User user = authService.getUserByEmail(authentication.getName());
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            // Get all interactions for this client
+            List<Interaction> interactions = interactionRepository.findByClientId(user.getId());
+
+            if (interactions.isEmpty()) {
+                return ResponseEntity.ok(new ClientPaymentHistoryPage(
+                        java.util.List.of(), 0, 0, page));
+            }
+
+            // Sort by startedAt descending (most recent first)
+            interactions.sort((a, b) -> {
+                Instant da = a.getStartedAt() != null ? a.getStartedAt() : Instant.EPOCH;
+                Instant db = b.getStartedAt() != null ? b.getStartedAt() : Instant.EPOCH;
+                return db.compareTo(da);
+            });
+
+            // Paginate
+            long totalElements = interactions.size();
+            int totalPages = (int) Math.ceil((double) totalElements / size);
+            int start = page * size;
+            int end = Math.min(start + size, interactions.size());
+            List<Interaction> pageInteractions = start < interactions.size()
+                    ? interactions.subList(start, end)
+                    : java.util.List.of();
+
+            if (pageInteractions.isEmpty()) {
+                return ResponseEntity.ok(new ClientPaymentHistoryPage(
+                        java.util.List.of(), totalElements, totalPages, page));
+            }
+
+            // Batch-load session payments for this page of interactions
+            List<String> interactionIds = pageInteractions.stream()
+                    .map(Interaction::getId).collect(Collectors.toList());
+            Map<String, List<SessionPayment>> paymentsByInteraction =
+                    sessionPaymentRepository.findByInteractionIdIn(interactionIds)
+                            .stream().collect(Collectors.groupingBy(SessionPayment::getInteractionId));
+
+            // Batch-load expert users
+            Set<String> expertIds = pageInteractions.stream()
+                    .map(Interaction::getExpertId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            Map<String, User> expertMap = userRepository.findAllById(expertIds)
+                    .stream().collect(Collectors.toMap(User::getId, Function.identity()));
+
+            // Build DTOs
+            List<ClientPaymentHistoryDto> dtos = new ArrayList<>();
+            for (Interaction interaction : pageInteractions) {
+                List<SessionPayment> payments = paymentsByInteraction
+                        .getOrDefault(interaction.getId(), java.util.List.of());
+
+                // Get expert name
+                String expertName = "Unknown Expert";
+                User expert = expertMap.get(interaction.getExpertId());
+                if (expert != null) {
+                    expertName = expert.getFullName() != null ? expert.getFullName() : expert.getEmail();
+                }
+
+                // Session date
+                String sessionDate = "";
+                if (interaction.getStartedAt() != null) {
+                    sessionDate = DateTimeFormatter.ISO_INSTANT.format(interaction.getStartedAt());
+                }
+
+                // Duration: use actual if completed, otherwise scheduled
+                int duration = interaction.getActualDurationMinutes() != null
+                        ? interaction.getActualDurationMinutes()
+                        : (interaction.getScheduledDurationMinutes() != null
+                                ? interaction.getScheduledDurationMinutes() : 0);
+
+                // Total paid amount
+                double totalPaid = interaction.getTotalPaidAmount() != null
+                        ? interaction.getTotalPaidAmount() : 0;
+
+                // Razorpay payment ID (from the most recent successful payment)
+                String razorpayPaymentId = null;
+                String paymentType = null;
+                for (SessionPayment sp : payments) {
+                    if ("SUCCESS".equals(sp.getStatus())) {
+                        razorpayPaymentId = sp.getTransactionId();
+                        paymentType = sp.getType() != null ? sp.getType().name() : "INITIAL";
+                    }
+                }
+
+                dtos.add(new ClientPaymentHistoryDto(
+                        interaction.getId(),
+                        interaction.getId(),
+                        expertName,
+                        interaction.getExpertId(),
+                        sessionDate,
+                        duration,
+                        totalPaid,
+                        interaction.getStatus() != null ? interaction.getStatus().name() : "UNKNOWN",
+                        interaction.getPaymentStatus() != null ? interaction.getPaymentStatus().name() : "UNPAID",
+                        razorpayPaymentId,
+                        paymentType
+                ));
+            }
+
+            return ResponseEntity.ok(new ClientPaymentHistoryPage(
+                    dtos, totalElements, totalPages, page));
+        } catch (Exception e) {
+            log.error("Payment history error: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse(false, "Failed to load payment history."));
+        }
     }
 }

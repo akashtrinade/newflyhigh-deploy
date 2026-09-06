@@ -51,6 +51,18 @@ public class SecretsValidationRunner implements CommandLineRunner {
     @Value("${RAZORPAY_KEY_SECRET:}")
     private String razorpayKeySecret;
 
+    @Value("${RAZORPAYX_KEY_ID:}")
+    private String razorpayxKeyId;
+
+    @Value("${RAZORPAYX_KEY_SECRET:}")
+    private String razorpayxKeySecret;
+
+    @Value("${RAZORPAYX_ACCOUNT_NUMBER:}")
+    private String razorpayxAccountNumber;
+
+    @Value("${RAZORPAYX_WEBHOOK_SECRET:}")
+    private String razorpayxWebhookSecret;
+
     private static final String PLACEHOLDER_PREFIX = "your-";
     private static final String TEST_KEY_PREFIX = "rzp_test_";
 
@@ -107,6 +119,21 @@ public class SecretsValidationRunner implements CommandLineRunner {
             log.error("RAZORPAY_KEY_ID starts with 'rzp_test_' — TEST keys detected in PRODUCTION!");
             throw new IllegalStateException(
                     "Razorpay TEST key detected in production. Set RAZORPAY_KEY_ID to a live key.");
+        }
+
+        // RazorpayX (payouts) — warn only. Missing keys fall back to the manual
+        // admin payout flow, so startup must never fail here.
+        if (isProd && razorpayxKeyId != null && razorpayxKeyId.startsWith(TEST_KEY_PREFIX)) {
+            log.warn("RAZORPAYX_KEY_ID starts with 'rzp_test_' — TEST payout keys detected in production!");
+        }
+        boolean razorpayxConfigured = !isBlank(razorpayxKeyId)
+                && !isBlank(razorpayxKeySecret)
+                && !isBlank(razorpayxAccountNumber);
+        if (isProd && !razorpayxConfigured) {
+            log.warn("RazorpayX payout keys not fully configured — automatic payouts disabled, manual admin flow active.");
+        }
+        if (razorpayxConfigured && isBlank(razorpayxWebhookSecret)) {
+            log.warn("RAZORPAYX_WEBHOOK_SECRET missing — payout status webhooks will be ignored (reconcile worker still covers misses).");
         }
     }
 

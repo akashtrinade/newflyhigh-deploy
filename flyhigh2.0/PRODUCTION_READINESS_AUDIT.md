@@ -1,5 +1,7 @@
 # 🔴 FlyHigh 2.0 — Production Readiness Audit
 
+> **Update — Aug 17, 2026:** Since this audit, the following were resolved: authorization/IDOR pass on all session & payment endpoints (403 enforcement, order→session binding), payment-recovery paths (verify from FREE_SESSION_EXPIRED/completed-unpaid, webhook EXTENSION handling, extension retry UI), in-app notifications (backend writers added), mid-call token refresh, call-room rejoin on reconnect, admin credential fail-fast + page-shaped admin API, refund eligibility (COMPLETED only), price (₹) and rating search filters, and Terms/Privacy pages. Remaining from the audit: payment-socket (8085) auth, pending-call TTL cleanup, payout/refund race hardening, and contact-form rate limiting.
+
 **Audit Date:** July 22, 2026  
 **Auditor:** Automated Production Readiness Analysis  
 **Scope:** All 4 modules (frontend, backend, signaling, infrastructure)  

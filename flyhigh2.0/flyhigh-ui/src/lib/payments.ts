@@ -5,6 +5,7 @@ import type {
   PaymentVerifyRequest,
   SessionStateResponse,
   DurationRecommendationRequest,
+  PaymentHistoryPage,
 } from "@/types/payment"
 import {
   CreateOrderResponseSchema,
@@ -107,4 +108,16 @@ export async function getSessionByCallRequest(
   callRequestId: string,
 ): Promise<{ success: boolean; interactionId: string; callRequestId: string; status: string }> {
   return api.get(`/video-call/session/${callRequestId}`)
+}
+
+/**
+ * Fetch paginated payment history for the authenticated client.
+ */
+export async function fetchPaymentHistory(
+  page = 0,
+  size = 10,
+): Promise<PaymentHistoryPage> {
+  return api.get<PaymentHistoryPage>(
+    `/payments/history?page=${page}&size=${size}`,
+  )
 }

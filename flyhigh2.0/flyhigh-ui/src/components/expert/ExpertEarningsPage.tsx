@@ -11,38 +11,69 @@ import {
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/AuthContext"
 import { useCountUp } from "@/hooks/use-count-up"
-import { fetchEarningsHistory, fetchEarningsSummary } from "@/lib/earnings"
+import { toast } from "@/hooks/use-toast"
+import {
+  fetchEarningsHistory,
+  fetchEarningsSummary,
+  fetchPayouts,
+  fetchPayoutDetails,
+  requestWithdrawal,
+  savePayoutDetails,
+} from "@/lib/earnings"
 import { StatCard } from "@/shared/components/molecules/StatCard"
 import { EmptyState } from "@/shared/components/atoms/EmptyState"
 import { ErrorAlert } from "@/shared/components/atoms/ErrorAlert"
-import type { EarningsSummary, ExpertEarning, EarningsPage } from "@/types/earnings"
+import type {
+  EarningsSummary,
+  ExpertEarning,
+  EarningsPage,
+  ExpertPayout,
+  PayoutDetails,
+} from "@/types/earnings"
 
 // ── Constants ──
 
 const TABS = ["Overview", "Pending", "Available", "History"] as const
 type Tab = (typeof TABS)[number]
 
-const INR_FORMAT = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-})
+/**
+ * Status filter per tab — mirrors the summary card definitions:
+ * pendingBalance  = PENDING + SETTLEMENT_PROCESSING + DISPUTED
+ * availableBalance = AVAILABLE (PAID = payout already reached the expert)
+ */
+const TAB_STATUS_FILTERS: Record<Tab, string | undefined> = {
+  Overview: undefined,
+  Pending: "PENDING,SETTLEMENT_PROCESSING,DISPUTED",
+  Available: "AVAILABLE",
+  History: undefined,
+}
+
+const INR_FORMAT = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 0, maximumFractionDigits: 0 })
+function formatINR(a: number | undefined) { return INR_FORMAT.format(a ?? 0) }
 
 // ── Helpers ──
 
-function formatINR(amount: number): string {
-  return INR_FORMAT.format(amount)
+/** Masks a saved account number for display, e.g. ********1234. */
+function maskAccountNumber(full: string | null | undefined): string {
+  if (!full) return ""
+  const digits = full.replace(/\D/g, "")
+  if (!digits) return ""
+  return "*".repeat(Math.max(0, digits.length - 4)) + digits.slice(-4)
 }
 
 function statusVariant(status: string): "secondary" | "default" | "outline" {
   switch (status) {
     case "PENDING":
+    case "SETTLEMENT_PROCESSING":
+    case "DISPUTED":
+    case "REFUND_ADJUSTED":
       return "secondary"
     case "AVAILABLE":
       return "default"
+    case "PAID":
     case "WITHDRAWN":
       return "outline"
     default:
@@ -61,6 +92,21 @@ function formatDate(isoString: string): string {
     })
   } catch {
     return isoString
+  }
+}
+
+function payoutStatusVariant(
+  status: string,
+): "secondary" | "default" | "outline" | "destructive" {
+  switch (status) {
+    case "PROCESSING":
+      return "secondary"
+    case "SUCCESS":
+      return "default"
+    case "FAILED":
+      return "destructive"
+    default:
+      return "outline"
   }
 }
 
@@ -121,6 +167,21 @@ export default function ExpertEarningsPage() {
   const [fromDate, setFromDate] = useState("")
   const [toDate, setToDate] = useState("")
 
+  // ── Payout (withdrawal) state ──
+  const [payoutDetails, setPayoutDetails] = useState<PayoutDetails | null>(null)
+  const [payouts, setPayouts] = useState<ExpertPayout[]>([])
+  const [bankForm, setBankForm] = useState({
+    accountHolderName: "",
+    accountNumber: "",
+    ifsc: "",
+    upiId: "",
+  })
+  /** Full account number returned by the server — kept only for re-submission;
+   *  the form field displays the masked version. */
+  const [savedAccountNumber, setSavedAccountNumber] = useState<string | null>(null)
+  const [isSavingDetails, setIsSavingDetails] = useState(false)
+  const [isWithdrawing, setIsWithdrawing] = useState(false)
+
   const overviewRef = useRef<HTMLDivElement>(null)
   const isInView = true // simplified; useInView could be added
 
@@ -144,10 +205,7 @@ export default function ExpertEarningsPage() {
       setIsLoadingPage(true)
       setPageError(null)
       try {
-        const statusFilter =
-          tab === "Overview" || tab === "History"
-            ? undefined
-            : tab.toUpperCase()
+        const statusFilter = TAB_STATUS_FILTERS[tab]
         const data = await fetchEarningsHistory({
           page: pageNum,
           size: 20,
@@ -175,6 +233,86 @@ export default function ExpertEarningsPage() {
     setCurrentPage(0)
     loadPage(0, activeTab)
   }, [activeTab, loadPage])
+
+  // ── Payout details + withdrawal history ──
+
+  useEffect(() => {
+    fetchPayoutDetails()
+      .then((d) => {
+        setPayoutDetails(d)
+        setSavedAccountNumber(d.accountNumber ?? null)
+        setBankForm({
+          accountHolderName: d.accountHolderName ?? "",
+          accountNumber: maskAccountNumber(d.accountNumber),
+          ifsc: d.ifsc ?? "",
+          upiId: d.upiId ?? "",
+        })
+      })
+      .catch(() => {})
+    fetchPayouts().then(setPayouts).catch(() => {})
+  }, [])
+
+  const handleSaveDetails = async () => {
+    setIsSavingDetails(true)
+    try {
+      const typedAccountNumber = bankForm.accountNumber.trim()
+      // If the field still shows the masked saved number, send the stored full
+      // number unchanged; an emptied or edited field is sent as-is.
+      const accountNumberToSend =
+        typedAccountNumber &&
+        typedAccountNumber === maskAccountNumber(savedAccountNumber)
+          ? (savedAccountNumber ?? undefined)
+          : typedAccountNumber || undefined
+
+      await savePayoutDetails({
+        accountHolderName: bankForm.accountHolderName || undefined,
+        accountNumber: accountNumberToSend,
+        ifsc: bankForm.ifsc || undefined,
+        upiId: bankForm.upiId || undefined,
+      })
+      toast({ title: "Payout details saved" })
+      // Re-sync with the server; if the fetch fails the form keeps what the user typed.
+      const d = await fetchPayoutDetails().catch(() => null)
+      if (d) {
+        setPayoutDetails(d)
+        setSavedAccountNumber(d.accountNumber ?? null)
+        setBankForm({
+          accountHolderName: d.accountHolderName ?? "",
+          accountNumber: maskAccountNumber(d.accountNumber),
+          ifsc: d.ifsc ?? "",
+          upiId: d.upiId ?? "",
+        })
+      }
+    } catch (err: any) {
+      toast({
+        title: "Failed to save details",
+        description: err?.message ?? "Something went wrong",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSavingDetails(false)
+    }
+  }
+
+  const handleWithdraw = async () => {
+    setIsWithdrawing(true)
+    try {
+      const res = await requestWithdrawal()
+      toast({
+        title: "Withdrawal requested",
+        description: `${formatINR(res.amount)} across ${res.earningCount} earning(s) — the platform will process it shortly.`,
+      })
+      await Promise.all([loadSummary(), fetchPayouts().then(setPayouts)])
+    } catch (err: any) {
+      toast({
+        title: "Withdrawal failed",
+        description: err?.message ?? "Something went wrong",
+        variant: "destructive",
+      })
+    } finally {
+      setIsWithdrawing(false)
+    }
+  }
 
   // ── Animated counters ──
 
@@ -291,6 +429,182 @@ export default function ExpertEarningsPage() {
         )}
       </motion.div>
 
+      {/* ── Payout Details & Withdrawal ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle>Withdraw to Bank</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-8 lg:grid-cols-2">
+            {/* Bank / UPI details form */}
+            <div>
+              <h3 className="text-sm font-semibold text-[var(--flyhigh-text)]">
+                Payout Details
+              </h3>
+              <p className="mt-1 text-xs text-[var(--flyhigh-text-muted)]">
+                {payoutDetails?.accountNumberLast4
+                  ? `Saved: account ending ${payoutDetails.accountNumberLast4}`
+                  : payoutDetails?.upiId
+                    ? `Saved: UPI ${payoutDetails.upiId}`
+                    : "Add where you'd like to receive payouts."}
+              </p>
+              {payoutDetails?.verificationStatus === "PENDING" && (
+                <p className="mt-1 text-xs text-amber-600">
+                  Verifying bank details…
+                </p>
+              )}
+              {payoutDetails?.verificationStatus === "VERIFIED" && (
+                <p className="mt-1 text-xs text-emerald-600">
+                  Bank details verified
+                  {payoutDetails.verificationNote
+                    ? ` · ${payoutDetails.verificationNote}`
+                    : ""}
+                </p>
+              )}
+              {payoutDetails?.verificationStatus === "FAILED" && (
+                <p className="mt-1 text-xs text-red-600">
+                  Bank verification failed
+                  {payoutDetails.verificationNote
+                    ? `: ${payoutDetails.verificationNote}`
+                    : ""}{" "}
+                  — re-save your details
+                </p>
+              )}
+              <div className="mt-4 space-y-3">
+                <input
+                  type="text"
+                  placeholder="Account holder name"
+                  value={bankForm.accountHolderName}
+                  onChange={(e) =>
+                    setBankForm((f) => ({ ...f, accountHolderName: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--flyhigh-primary)]/20 focus:border-[var(--flyhigh-primary)]"
+                />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="Account number"
+                  value={bankForm.accountNumber}
+                  onChange={(e) =>
+                    setBankForm((f) => ({ ...f, accountNumber: e.target.value }))
+                  }
+                  onFocus={() => {
+                    // Clear the mask so the expert can type a replacement number.
+                    if (
+                      savedAccountNumber &&
+                      bankForm.accountNumber === maskAccountNumber(savedAccountNumber)
+                    ) {
+                      setBankForm((f) => ({ ...f, accountNumber: "" }))
+                    }
+                  }}
+                  onBlur={() => {
+                    // Restore the mask if the expert left the field empty.
+                    if (!bankForm.accountNumber && savedAccountNumber) {
+                      setBankForm((f) => ({
+                        ...f,
+                        accountNumber: maskAccountNumber(savedAccountNumber),
+                      }))
+                    }
+                  }}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--flyhigh-primary)]/20 focus:border-[var(--flyhigh-primary)]"
+                />
+                <input
+                  type="text"
+                  placeholder="IFSC code"
+                  value={bankForm.ifsc}
+                  onChange={(e) =>
+                    setBankForm((f) => ({ ...f, ifsc: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--flyhigh-primary)]/20 focus:border-[var(--flyhigh-primary)]"
+                />
+                <input
+                  type="text"
+                  placeholder="UPI id (optional, e.g. name@upi)"
+                  value={bankForm.upiId}
+                  onChange={(e) =>
+                    setBankForm((f) => ({ ...f, upiId: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--flyhigh-primary)]/20 focus:border-[var(--flyhigh-primary)]"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleSaveDetails}
+                  disabled={isSavingDetails}
+                  className="h-9 bg-[var(--flyhigh-primary)] hover:bg-[var(--flyhigh-primary-hover)]"
+                >
+                  {isSavingDetails ? "Saving…" : "Save Details"}
+                </Button>
+              </div>
+            </div>
+
+            {/* Withdraw section */}
+            <div className="flex flex-col">
+              <h3 className="text-sm font-semibold text-[var(--flyhigh-text)]">
+                Withdrawal
+              </h3>
+              <p className="mt-1 text-xs text-[var(--flyhigh-text-muted)]">
+                Withdrawable balance:{" "}
+                <span className="font-semibold text-emerald-600">
+                  {formatINR(summary?.availableBalance ?? 0)}
+                </span>{" "}
+                · Minimum withdrawal: ₹1,000
+              </p>
+              <Button
+                className="mt-4 w-fit gap-2 bg-emerald-600 hover:bg-emerald-700"
+                onClick={handleWithdraw}
+                disabled={isWithdrawing || (summary?.availableBalance ?? 0) <= 0}
+              >
+                <Wallet className="size-4" />
+                {isWithdrawing ? "Requesting…" : "Withdraw Available Balance"}
+              </Button>
+
+              {/* Withdrawal history */}
+              <div className="mt-6">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--flyhigh-text-muted)]">
+                  Recent Withdrawals
+                </h4>
+                {payouts.length === 0 ? (
+                  <p className="mt-2 text-sm text-[var(--flyhigh-text-muted)]">
+                    No withdrawals yet.
+                  </p>
+                ) : (
+                  <ul className="mt-2 divide-y divide-slate-100">
+                    {payouts.slice(0, 5).map((p) => (
+                      <li
+                        key={p.id}
+                        className="flex items-center justify-between gap-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-[var(--flyhigh-text)]">
+                            {formatINR(p.payoutAmount ?? 0)}
+                          </p>
+                          <p className="text-xs text-[var(--flyhigh-text-muted)]">
+                            {formatDate(p.createdAt ?? "")}
+                            {p.gatewayReferenceId
+                              ? ` · Ref ${p.gatewayReferenceId}`
+                              : ""}
+                          </p>
+                          {p.status === "FAILED" && p.errorMessage ? (
+                            <p className="text-xs text-red-600">{p.errorMessage}</p>
+                          ) : null}
+                        </div>
+                        <Badge variant={payoutStatusVariant(p.status)}>
+                          {p.status}
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* ── Tabs ── */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -400,7 +714,11 @@ export default function ExpertEarningsPage() {
                       description={
                         tab === "Overview"
                           ? "Complete your first paid session to start earning."
-                          : `Earnings with status "${tab}" will appear here.`
+                          : tab === "Available"
+                            ? "Settled earnings ready for payout will appear here."
+                            : tab === "Pending"
+                              ? "Earnings awaiting settlement or under review will appear here."
+                              : `Earnings with status "${tab}" will appear here.`
                       }
                       icon={<DollarSign className="size-10" />}
                     />
@@ -443,6 +761,11 @@ export default function ExpertEarningsPage() {
                                   <Badge variant={statusVariant(earning.status)}>
                                     {earning.status}
                                   </Badge>
+                                  {earning.payoutStatus === "PROCESSING" && (
+                                    <span className="ml-2 text-xs font-medium text-amber-600">
+                                      In withdrawal
+                                    </span>
+                                  )}
                                 </td>
                               </tr>
                             ))}
@@ -461,9 +784,16 @@ export default function ExpertEarningsPage() {
                               <span className="text-sm font-medium text-[var(--flyhigh-text)]">
                                 {earning.clientName}
                               </span>
-                              <Badge variant={statusVariant(earning.status)}>
-                                {earning.status}
-                              </Badge>
+                              <span className="flex items-center gap-2">
+                                {earning.payoutStatus === "PROCESSING" && (
+                                  <span className="text-xs font-medium text-amber-600">
+                                    In withdrawal
+                                  </span>
+                                )}
+                                <Badge variant={statusVariant(earning.status)}>
+                                  {earning.status}
+                                </Badge>
+                              </span>
                             </div>
                             <div className="text-xs text-[var(--flyhigh-text-muted)]">
                               {formatDate(earning.sessionDate)} ·{" "}

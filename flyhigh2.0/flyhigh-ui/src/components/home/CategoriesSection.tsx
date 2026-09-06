@@ -1,13 +1,56 @@
 import { ArrowRight, ChevronRight } from "lucide-react"
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { useAuth } from "@/contexts/AuthContext"
 
-import { categories } from "./data"
+import { categories as fallbackCategories } from "./data"
 import { Reveal } from "./Reveal"
 import { SectionLabel } from "./SectionLabel"
+import type { CategoryCount } from "@/types/public-stats"
 
-export function CategoriesSection() {
+interface CategoriesSectionProps {
+  categoryCounts?: CategoryCount[] | null
+}
+
+export function CategoriesSection({ categoryCounts }: CategoriesSectionProps) {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const [expanded, setExpanded] = useState(false)
+
+  const INITIAL_COUNT = 8 // 2 rows × 4 columns on large screens
+
+  // Merge real counts with static icon/color definitions from data.ts
+  const countMap = new Map(categoryCounts?.map((c) => [c.name, c.expertCount]) ?? [])
+  const displayCategories = fallbackCategories.map((cat) => ({
+    ...cat,
+    expertCount: countMap.get(cat.name) ?? cat.expertCount,
+  }))
+
+  // Add any DB categories not already in the static list
+  if (categoryCounts) {
+    for (const cc of categoryCounts) {
+      if (!fallbackCategories.some((c) => c.name === cc.name)) {
+        displayCategories.push({
+          name: cc.name,
+          icon: fallbackCategories[0].icon, // default icon
+          expertCount: cc.expertCount,
+          color: "bg-indigo-50 text-indigo-600",
+        })
+      }
+    }
+  }
+
+  const hasMore = displayCategories.length > INITIAL_COUNT
+  const visibleCategories = expanded ? displayCategories : displayCategories.slice(0, INITIAL_COUNT)
+
+  const handleBrowseCategory = (categoryName: string) => {
+    const base = user ? "/search-experts" : "/login"
+    navigate(`${base}?category=${encodeURIComponent(categoryName)}`)
+  }
+
   return (
     <section
       id="categories"
@@ -30,11 +73,14 @@ export function CategoriesSection() {
         </Reveal>
 
         <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {categories.map((category, index) => {
+          {visibleCategories.map((category, index) => {
             const Icon = category.icon
             return (
               <Reveal key={category.name} delay={index * 60}>
-                <Card className="group h-full cursor-pointer border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-500/5">
+                <Card
+                  onClick={() => handleBrowseCategory(category.name)}
+                  className="group h-full cursor-pointer border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-500/5"
+                >
                   <CardContent className="flex h-full flex-col p-5">
                     <div
                       className={`mb-4 flex size-11 items-center justify-center rounded-xl ${category.color}`}
@@ -60,16 +106,19 @@ export function CategoriesSection() {
           })}
         </div>
 
-        <Reveal delay={500} className="mt-10 text-center">
-          <Button
-            variant="outline"
-            size="lg"
-            className="h-11 gap-2 border-slate-300 px-8 text-slate-700 hover:bg-white"
-          >
-            View All Categories
-            <ArrowRight className="size-4" />
-          </Button>
-        </Reveal>
+        {hasMore && (
+          <Reveal delay={500} className="mt-10 text-center">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setExpanded(!expanded)}
+              className="h-11 gap-2 border-slate-300 px-8 text-slate-700 hover:bg-white"
+            >
+              {expanded ? "Show Less" : `View All Categories (${displayCategories.length})`}
+              <ArrowRight className={`size-4 transition-transform ${expanded ? "rotate-90" : ""}`} />
+            </Button>
+          </Reveal>
+        )}
       </div>
     </section>
   )

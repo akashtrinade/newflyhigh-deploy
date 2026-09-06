@@ -1,8 +1,17 @@
 spring.data.mongodb.database: flyhigh2
 logging.level.com.flyhigh: DEBUG
 
+# Dev-only admin account — production MUST set ADMIN_EMAIL/ADMIN_PASSWORD via environment.
+# Never used outside the dev profile.
+app.admin.email: ${ADMIN_EMAIL:admin@flyhigh.com}
+app.admin.password: ${ADMIN_PASSWORD:DevAdmin#FlyHigh!2026}
+
 # Dev-only Razorpay keys — set via environment variables or .env file.
 # NEVER commit real keys to version control.
 # Rotated after keys were exposed in git history (July 2026).
 razorpay.key.id: ${RAZORPAY_KEY_ID:}
 razorpay.key.secret: ${RAZORPAY_KEY_SECRET:}
+
+# Dev: keep seeded "online" experts visible for an hour after backend start
+# (production keeps the 120s default; real experts heartbeat every 60s).
+app.presence.online-window-seconds: 3600

@@ -1,4 +1,4 @@
-import { Menu, Plane, Search } from "lucide-react"
+import { Menu, Search } from "lucide-react"
 import { useState, useMemo, useCallback } from "react"
 import { Link, useLocation } from "react-router-dom"
 
@@ -73,12 +73,11 @@ export function Navbar() {
           to="/"
           className="flex items-center gap-2 transition-opacity hover:opacity-80"
         >
-          <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--flyhigh-primary)] to-[var(--flyhigh-primary-hover)] shadow-sm">
-            <Plane className="size-4 text-white" aria-hidden="true" />
-          </div>
-          <span className="text-lg font-bold tracking-tight text-[var(--flyhigh-text)]">
-            FlyHigh
-          </span>
+          <img
+            src="/images/logo.png"
+            alt="FlyHigh"
+            className="h-8 w-auto"
+          />
         </Link>
 
         <ul className="hidden items-center gap-0.5 lg:flex">
@@ -134,10 +133,11 @@ export function Navbar() {
             <SheetContent side="right" className="w-72">
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
-                  <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--flyhigh-primary)] to-[var(--flyhigh-primary-hover)]">
-                    <Plane className="size-3.5 text-white" />
-                  </div>
-                  FlyHigh
+                  <img
+                    src="/images/logo.png"
+                    alt="FlyHigh"
+                    className="h-6 w-auto"
+                  />
                 </SheetTitle>
               </SheetHeader>
               <nav className="mt-6 flex flex-col gap-1">

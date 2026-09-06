@@ -1,0 +1,676 @@
+<title>FlyHigh Money Flow</title>
+
+<style>
+  :root {
+    --ground: #F4F7FC;
+    --surface: #FFFFFF;
+    --ink: #0B1B33;
+    --ink-soft: #33445E;
+    --muted: #5B6B82;
+    --line: #DCE5F1;
+    --accent: #1D6FF2;
+    --accent-ink: #0C3FA8;
+    --accent-soft: #E9F1FE;
+    --success: #0E9F6E;
+    --success-soft: #E4F6EF;
+    --warn: #B45309;
+    --warn-soft: #FCF0E0;
+    --danger: #C6363A;
+    --danger-soft: #FBEAEA;
+    --code-bg: #0A1424;
+    --code-ink: #D9E4F5;
+    --code-muted: #7E93B5;
+    --chip-bg: #E9F1FE;
+    --ui-input: #FFFFFF;
+    --ui-input-border: #C9D6E8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0A1322;
+      --surface: #0F1C33;
+      --ink: #E8EEF8;
+      --ink-soft: #C3D0E3;
+      --muted: #93A5BD;
+      --line: #22334E;
+      --accent: #5C9DF9;
+      --accent-ink: #8DB8FB;
+      --accent-soft: #13294A;
+      --success: #34D399;
+      --success-soft: #0E2F26;
+      --warn: #FBBF24;
+      --warn-soft: #33250A;
+      --danger: #F87171;
+      --danger-soft: #3A1618;
+      --code-bg: #060D1A;
+      --code-ink: #D9E4F5;
+      --code-muted: #7E93B5;
+      --chip-bg: #13294A;
+      --ui-input: #0B1830;
+      --ui-input-border: #2A3B5C;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0A1322;
+    --surface: #0F1C33;
+    --ink: #E8EEF8;
+    --ink-soft: #C3D0E3;
+    --muted: #93A5BD;
+    --line: #22334E;
+    --accent: #5C9DF9;
+    --accent-ink: #8DB8FB;
+    --accent-soft: #13294A;
+    --success: #34D399;
+    --success-soft: #0E2F26;
+    --warn: #FBBF24;
+    --warn-soft: #33250A;
+    --danger: #F87171;
+    --danger-soft: #3A1618;
+    --code-bg: #060D1A;
+    --code-ink: #D9E4F5;
+    --code-muted: #7E93B5;
+    --chip-bg: #13294A;
+    --ui-input: #0B1830;
+    --ui-input-border: #2A3B5C;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 24px 80px; }
+
+  /* Header */
+  header { padding: 56px 0 40px; border-bottom: 1px solid var(--line); }
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--accent); font-weight: 500; margin-bottom: 14px;
+  }
+  h1 {
+    font-family: "Sora", sans-serif; font-size: clamp(30px, 5vw, 42px); font-weight: 700;
+    letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); text-wrap: balance;
+  }
+  .lede { margin-top: 14px; font-size: 17px; color: var(--ink-soft); max-width: 660px; text-wrap: pretty; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+  .chip {
+    font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 999px;
+    background: var(--chip-bg); color: var(--accent-ink); border: 1px solid var(--line);
+  }
+
+  /* Sections */
+  section { margin-top: 52px; }
+  .s-title {
+    font-family: "Sora", sans-serif; font-size: 21px; font-weight: 600; letter-spacing: -0.01em;
+    color: var(--ink); margin-bottom: 6px; text-wrap: balance;
+  }
+  .s-sub { color: var(--muted); font-size: 14.5px; margin-bottom: 20px; max-width: 660px; }
+  .step-body p { margin-top: 10px; color: var(--ink-soft); font-size: 15px; }
+  .step-body ul { margin-top: 10px; padding-left: 20px; color: var(--ink-soft); font-size: 15px; }
+  .step-body li { margin-top: 6px; }
+  .step-body li::marker { color: var(--accent); }
+  .step-body code, p code, li code, td code {
+    font-family: "IBM Plex Mono", monospace; font-size: 0.86em;
+    background: var(--accent-soft); color: var(--accent-ink); padding: 1px 6px; border-radius: 4px;
+  }
+  .step { margin-top: 32px; }
+  .step-head { display: flex; align-items: baseline; gap: 12px; }
+  .step-num {
+    font-family: "IBM Plex Mono", monospace; font-size: 13px; font-weight: 500;
+    color: var(--accent-ink); background: var(--accent-soft); border-radius: 6px; padding: 2px 9px; flex-shrink: 0;
+  }
+  .step-title { font-family: "Sora", sans-serif; font-size: 17px; font-weight: 600; color: var(--ink); }
+
+  /* Flow strip */
+  .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+  .flow-step { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 14px 12px; }
+  .flow-dot { width: 8px; height: 8px; border-radius: 999px; margin-bottom: 8px; }
+  .dot-accent { background: var(--accent); }
+  .dot-warn { background: var(--warn); }
+  .dot-success { background: var(--success); }
+  .flow-step b { display: block; font-size: 13.5px; color: var(--ink); font-weight: 600; }
+  .flow-step span { display: block; font-size: 12.5px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
+  .flow-step .amt { display: block; font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--accent-ink); margin-top: 5px; }
+  @media (max-width: 700px) { .flow { grid-template-columns: 1fr 1fr; } }
+
+  /* Tables */
+  .table-scroll { overflow-x: auto; margin-top: 16px; border: 1px solid var(--line); border-radius: 8px; }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); font-size: 14px; }
+  th {
+    text-align: left; font-family: "IBM Plex Mono", monospace; font-size: 11.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); padding: 12px 16px; border-bottom: 1px solid var(--line); white-space: nowrap;
+  }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--line); color: var(--ink-soft); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td.mono { font-family: "IBM Plex Mono", monospace; font-size: 13px; color: var(--ink); white-space: nowrap; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* Status chips */
+  .status { display: inline-block; font-size: 12px; font-weight: 500; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+  .st-pending { background: var(--warn-soft); color: var(--warn); }
+  .st-success { background: var(--success-soft); color: var(--success); }
+  .st-failed { background: var(--danger-soft); color: var(--danger); }
+  .st-info { background: var(--accent-soft); color: var(--accent-ink); }
+  .st-muted { background: var(--line); color: var(--muted); }
+
+  /* Code blocks */
+  .codeblock { margin-top: 14px; background: var(--code-bg); border-radius: 8px; overflow: hidden; }
+  .codeblock .lang {
+    display: block; font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--code-muted);
+    letter-spacing: 0.1em; text-transform: uppercase; padding: 10px 16px 0;
+  }
+  .codeblock pre {
+    padding: 10px 16px 16px; overflow-x: auto; font-family: "IBM Plex Mono", monospace;
+    font-size: 13px; line-height: 1.7; color: var(--code-ink);
+  }
+  .codeblock .cm { color: var(--code-muted); }
+
+  /* ── UI mockups (recreate the app) ── */
+  .mock { margin-top: 16px; max-width: 620px; }
+  .mock .ui-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px;
+  }
+  .ui-card-title { font-family: "Sora", sans-serif; font-size: 15px; font-weight: 600; color: var(--ink); }
+  .ui-sub { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+  .ui-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .ui-input {
+    flex: 1 1 150px; background: var(--ui-input); border: 1px solid var(--ui-input-border);
+    border-radius: 8px; padding: 8px 12px; font-size: 13px; color: var(--ink);
+    font-family: "IBM Plex Sans", sans-serif; min-width: 0;
+  }
+  .ui-input.mask { font-family: "IBM Plex Mono", monospace; color: var(--muted); letter-spacing: 0.08em; }
+  .ui-btn {
+    display: inline-flex; align-items: center; gap: 6px; border: none; border-radius: 8px;
+    font-family: "IBM Plex Sans", sans-serif; font-size: 13px; font-weight: 500;
+    padding: 8px 16px; cursor: default; color: #FFFFFF;
+  }
+  .btn-primary { background: var(--accent); }
+  .btn-emerald { background: #059669; }
+  .btn-ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); }
+  .btn-disabled { background: var(--line); color: var(--muted); }
+  .ui-stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+  .ui-stat {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+  }
+  .ui-stat .lbl { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .ui-stat .val { font-family: "Sora", sans-serif; font-size: 21px; font-weight: 700; color: var(--ink); margin-top: 4px; }
+  .ui-stat .val.green { color: var(--success); }
+  .ui-stat .val.amber { color: var(--warn); }
+  @media (max-width: 600px) { .ui-stat-row { grid-template-columns: 1fr; } }
+  .ui-list { margin-top: 14px; border-top: 1px solid var(--line); }
+  .ui-list-item {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+    padding: 9px 0; border-bottom: 1px solid var(--line);
+  }
+  .ui-list-item .amt { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+  .ui-list-item .meta { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .ui-list-item .err { font-size: 12px; color: var(--danger); margin-top: 2px; }
+  .ui-toast {
+    display: inline-block; margin-top: 12px; background: var(--surface); border: 1px solid var(--line);
+    border-left: 3px solid var(--success); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--ink);
+  }
+  .ui-toast.fail { border-left-color: var(--danger); }
+  .verify-line { font-size: 12.5px; margin-top: 8px; }
+  .verify-line.ok { color: var(--success); }
+  .verify-line.wait { color: var(--warn); }
+  .verify-line.bad { color: var(--danger); }
+  .mock-label {
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 8px 2px;
+  }
+
+  /* Troubleshooting-style items */
+  .t-item { margin-top: 18px; padding-left: 16px; border-left: 1px solid var(--line); }
+  .t-item b { color: var(--ink); font-size: 14.5px; }
+  .t-item p { color: var(--ink-soft); font-size: 14px; margin-top: 4px; }
+
+  footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+</style>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">FlyHigh · Money Flow</p>
+  <h1>FlyHigh Money Flow</h1>
+  <p class="lede">The complete journey of a rupee on FlyHigh — from the client's payment through TrinaDe's commission, settlement, and the expert's withdrawal into their bank account, with real UI samples at every step.</p>
+  <div class="chips">
+    <span class="chip">Commission split</span>
+    <span class="chip">Settlement lifecycle</span>
+    <span class="chip">RazorpayX payouts</span>
+    <span class="chip">UI samples from the live app</span>
+  </div>
+</header>
+
+<!-- ── Journey at a glance ── -->
+<section>
+  <h2 class="s-title">The journey at a glance</h2>
+  <p class="s-sub">Worked example used throughout this doc: expert's rate is <b>₹1,000/hour</b>, session lasts <b>60 minutes</b>, and the platform split is <b>80% expert / 20% TrinaDe</b> of what the client pays.</p>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-dot dot-accent"></div>
+      <b>1 · Client pays</b>
+      <span>Client pays the full session price through Razorpay checkout</span>
+      <span class="amt">₹1,250 charged</span>
+    </div>
+    <div class="flow-step">
+      <div class="flow-dot dot-warn"></div>
+      <b>2 · Split &amp; hold</b>
+      <span>TrinaDe's ₹250 commission stays; ₹1,000 is the expert's earning — held while the session completes and the settlement window runs</span>
+      <span class="amt">₹1,000 expert · ₹250 TrinaDe</span>
+    </div>
+    <div class="flow-step">
+      <div class="flow-dot dot-success"></div>
+      <b>3 · Settlement</b>
+      <span>After the dispute window, checks pass and the earning becomes AVAILABLE in the expert's dashboard</span>
+      <span class="amt">Available: ₹1,000</span>
+    </div>
+    <div class="flow-step">
+      <div class="flow-dot dot-success"></div>
+      <b>4 · Expert withdraws</b>
+      <span>Expert clicks Withdraw → RazorpayX transfers the money to their bank / UPI automatically</span>
+      <span class="amt">₹1,000 → expert's bank</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── The split ── -->
+<section>
+  <h2 class="s-title">The money split — 80% expert, 20% TrinaDe</h2>
+  <p class="s-sub">For every payment the split is fixed: <b>80% of the client's payment goes to the expert's earnings, and 20% stays with TrinaDe</b> as the platform commission.</p>
+  <div class="codeblock">
+    <span class="lang">split formula</span>
+    <pre><span class="cm">// 60-minute session, expert hourly rate ₹1,000</span>
+clientAmount       = ₹1,250                     <span class="cm">// what the client pays</span>
+expertAmount       = clientAmount × 80%         <span class="cm">= ₹1,000</span>
+trinaDeCommission  = clientAmount × 20%         <span class="cm">= ₹250</span></pre>
+  </div>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Client pays</th><th>Expert gets</th><th>TrinaDe keeps</th><th>Split</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="num">₹1,250</td>
+          <td class="num">₹1,000</td>
+          <td class="num">₹250</td>
+          <td class="num">80% / 20%</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="step-body">
+    <p>The split is driven by the commission setting (<b>Admin → Settings → Commission Rate</b>; backend: <code>PricingService</code> — single source of truth). All money math uses BigDecimal with banker's rounding — no floating-point drift.</p>
+  </div>
+</section>
+
+<!-- ── Client pays ── -->
+<section>
+  <h2 class="s-title">Step 1 — The client pays</h2>
+  <div class="step">
+    <div class="step-head"><span class="step-num">1.1</span><span class="step-title">Booking &amp; payment</span></div>
+    <div class="step-body">
+      <p>The client books a session and pays the full client price via Razorpay checkout. Behind the scenes the backend creates a Razorpay order for the exact amount (in paise) and, on successful payment, the money is <b>captured and held</b> — the session's payment status becomes <code>HELD</code>.</p>
+      <div class="mock">
+        <p class="mock-label">UI sample · client payment step</p>
+        <div class="ui-card">
+          <div class="ui-card-title">Book Session — 60 min</div>
+          <div class="ui-sub">Expert rate ₹1,000/hr · Platform fee ₹250 · Total ₹1,250</div>
+          <div class="ui-row">
+            <span class="ui-btn btn-primary">Pay ₹1,250 via Razorpay</span>
+          </div>
+        </div>
+      </div>
+      <div class="codeblock">
+        <span class="lang">backend</span>
+        <pre><span class="cm">// PaymentService.createRazorpayOrder</span>
+POST razorpay /v1/orders { amount: 125000 <span class="cm">(paise)</span>, currency: "INR" }
+<span class="cm">// client pays → verify (client signature + atomic claim) →</span>
+interaction.paymentStatus = HELD
+<span class="cm">// Razorpay webhook payment.captured is the defense-in-depth backup</span></pre>
+      </div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-head"><span class="step-num">1.2</span><span class="step-title">Where the money sits</span></div>
+    <div class="step-body">
+      <p>From this moment until the expert is paid, the money is not credited anywhere automatically — the ₹1,000 expert share is <b>held</b> while the session completes and the settlement window runs (so the client can dispute or get a refund inside that window). TrinaDe's ₹250 commission is the platform's share.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Earning created ── -->
+<section>
+  <h2 class="s-title">Step 2 — Session completes → the earning is created</h2>
+  <div class="step-body">
+    <p>When the session finishes with status <code>COMPLETED</code> and payment <code>HELD</code>, the backend creates an <b>ExpertEarning</b> record for the expert's share and starts the settlement countdown:</p>
+    <div class="codeblock">
+      <span class="lang">expert_earnings record (MongoDB)</span>
+      <pre>{
+  expertId:            "…",
+  interactionId:       "…",          <span class="cm">// links to the session</span>
+  clientPaidAmount:    1250.00,      <span class="cm">// what the client paid</span>
+  platformFee:         250.00,       <span class="cm">// TrinaDe's share</span>
+  expertEarningAmount: 1000.00,      <span class="cm">// the expert's share</span>
+  status:              "PENDING",    <span class="cm">// waiting out the settlement window</span>
+  settlementStartTime: 2026-08-21T10:00:00Z,
+  settlementEndTime:   2026-08-21T10:10:00Z   <span class="cm">// + settlement window</span>
+}</pre>
+    </div>
+    <p>The <b>settlement window</b> (the "Dispute Window" in Admin → Settings, default 10 minutes in dev — set it to 24h or longer for production) is the period where the client can dispute or request a refund. Nothing is payable while the earning is <code>PENDING</code>.</p>
+  </div>
+</section>
+
+<!-- ── Settlement ── -->
+<section>
+  <h2 class="s-title">Step 3 — Settlement turns PENDING into AVAILABLE</h2>
+  <div class="step-body">
+    <p>A scheduled worker (every minute in dev) finds <code>PENDING</code> earnings whose window has elapsed and runs five checks. If all pass, the earning becomes <span class="status st-success">AVAILABLE</span> and the amount appears in the expert's <b>Available Balance</b>.</p>
+    <div class="codeblock">
+      <span class="lang">settlement checks — SettlementService</span>
+      <pre>PENDING → claim → SETTLEMENT_PROCESSING → checks:
+ 1. Payment is still HELD         <span class="cm">(not refunded/voided)</span>
+ 2. Session is COMPLETED
+ 3. No active dispute
+ 4. No refund in progress
+ 5. No payout already exists for this earning
+
+All pass → status = AVAILABLE   <span class="cm">← now withdrawable</span>
+Any fail → revert to PENDING (max 5 attempts, then blocked for admin review)</pre>
+    </div>
+    <p>Disputes and refunds therefore <b>block money from ever becoming withdrawable</b> — a disputed session's earning stays out of the Available Balance until the dispute is resolved.</p>
+  </div>
+</section>
+
+<!-- ── Dashboard balances ── -->
+<section>
+  <h2 class="s-title">Step 4 — The expert dashboard shows the money</h2>
+  <div class="step-body">
+    <p>After settlement, the expert's dashboard looks like this (the numbers come from <code>GET /api/expert/earnings/summary</code>):</p>
+    <div class="mock">
+      <p class="mock-label">UI sample · expert dashboard — overview cards</p>
+      <div class="ui-stat-row">
+        <div class="ui-stat"><div class="lbl">Available Balance</div><div class="val green">₹1,000</div></div>
+        <div class="ui-stat"><div class="lbl">Pending Balance</div><div class="val amber">₹0</div></div>
+        <div class="ui-stat"><div class="lbl">Lifetime Earnings</div><div class="val">₹1,000</div></div>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Card</th><th>What it counts</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">Available Balance</td><td><code>AVAILABLE</code> earnings not currently inside a withdrawal request — this is what the Withdraw button pays out</td></tr>
+          <tr><td class="mono">Pending Balance</td><td><code>PENDING</code> + <code>SETTLEMENT_PROCESSING</code> + <code>DISPUTED</code> earnings — money still inside the settlement window or under review</td></tr>
+          <tr><td class="mono">Lifetime Earnings</td><td>Every expert earning ever created, any status (including PAID)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── Bank details ── -->
+<section>
+  <h2 class="s-title">Step 5 — Adding bank details</h2>
+  <div class="step">
+    <div class="step-head"><span class="step-num">5.1</span><span class="step-title">The Withdraw to Bank form</span></div>
+    <div class="step-body">
+      <p>On the same dashboard page, the expert fills their account holder name, account number, IFSC and (optional) UPI id, then clicks <b>Save Details</b>.</p>
+      <div class="mock">
+        <p class="mock-label">UI sample · Withdraw to Bank — Payout Details form</p>
+        <div class="ui-card">
+          <div class="ui-card-title">Withdraw to Bank</div>
+          <div class="ui-sub">Payout Details · Saved: account ending 6789</div>
+          <p class="verify-line ok">✓ Bank details verified · Registered name: GAURAV KUMAR</p>
+          <div class="ui-row">
+            <input class="ui-input" value="Gaurav Kumar" readonly>
+            <input class="ui-input mask" value="********6789" readonly>
+          </div>
+          <div class="ui-row">
+            <input class="ui-input" value="HDFC0000053" readonly>
+            <input class="ui-input" value="gaurav@upi" readonly>
+          </div>
+          <div class="ui-row">
+            <span class="ui-btn btn-primary">Save Details</span>
+          </div>
+        </div>
+      </div>
+      <p><b>Account number masking:</b> after saving, the field always shows only the last 4 digits (<code>********6789</code>). The full number is stored but never displayed — click into the field to type a replacement.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-head"><span class="step-num">5.2</span><span class="step-title">Bank verification (live mode)</span></div>
+    <div class="step-body">
+      <p>When RazorpayX keys are configured and the expert saves full bank details, the backend creates a contact + fund account at RazorpayX and starts a ₹1 account-validation check. Until the result arrives, the UI shows:</p>
+      <div class="mock" style="max-width: 420px;">
+        <div class="ui-card">
+          <div class="ui-sub">Saved: account ending 6789</div>
+          <p class="verify-line wait">⏳ Verifying bank details…</p>
+        </div>
+      </div>
+      <p>Then the webhook flips it to verified or failed:</p>
+      <div class="ui-row" style="margin-top: 10px;">
+        <div class="ui-card" style="flex: 1;"><div class="ui-sub">Saved: account ending 6789</div><p class="verify-line ok">✓ Bank details verified · Registered name: GAURAV KUMAR</p></div>
+        <div class="ui-card" style="flex: 1;"><div class="ui-sub">Saved: account ending 6789</div><p class="verify-line bad">✗ Bank verification failed: account inactive — re-save your details</p></div>
+      </div>
+      <div class="step-body">
+        <p>A <b>failed</b> verification blocks bank withdrawals until the expert re-saves valid details (UPI-only saves skip verification). In test mode the validation API is unavailable, so this step is skipped and details save directly.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Withdraw ── -->
+<section>
+  <h2 class="s-title">Step 6 — Clicking “Withdraw Available Balance”</h2>
+  <div class="step">
+    <div class="step-head"><span class="step-num">6.1</span><span class="step-title">The button</span></div>
+    <div class="step-body">
+      <div class="mock">
+        <p class="mock-label">UI sample · Withdrawal section</p>
+        <div class="ui-card">
+          <div class="ui-card-title">Withdrawal</div>
+          <div class="ui-sub">Withdrawable balance: <b style="color: var(--success);">₹1,000</b> · Minimum withdrawal: ₹1,000</div>
+          <div class="ui-row">
+            <span class="ui-btn btn-emerald">💰 Withdraw Available Balance</span>
+          </div>
+          <div class="ui-toast">Withdrawal requested — ₹1,000 across 1 earning(s). The platform will process it shortly.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-head"><span class="step-num">6.2</span><span class="step-title">What the backend does, in order</span></div>
+    <div class="step-body">
+      <div class="codeblock">
+        <span class="lang">POST /api/expert/payouts/withdraw — ExpertPayoutService.requestWithdrawal</span>
+        <pre>1. Auth: expert role + bank/UPI details on file
+2. Atomically claim every eligible AVAILABLE earning
+   (findAndModify: payoutStatus → PROCESSING)  <span class="cm">// no double-withdrawal, ever</span>
+3. Total &lt; ₹1,000 minimum → release the claims, error out
+4. Create Payout (PROCESSING) with the earnings bundle + a
+   snapshot of the bank details + idempotency key
+5. RazorpayX transfer (automatic mode):
+   a. contact  "expert_&lt;id&gt;"         <span class="cm">// reuse or create</span>
+   b. fund account (bank / VPA)      <span class="cm">// from the snapshot</span>
+   c. POST /v1/payouts               <span class="cm">// IMPS ≤ ₹5L, NEFT above, UPI ≤ ₹1L</span>
+      header X-Payout-Idempotency: &lt;payoutId&gt;  <span class="cm">// retries can't double-pay</span>
+      queue_if_low_balance: true
+   d. store gatewayPayoutId + mode on the Payout
+6. Respond: "Withdrawal requested" — payout stays PROCESSING
+   until the gateway confirms</pre>
+      </div>
+      <p>Any failure inside step 5 (rejected details, gateway down, UPI limit) <b>releases the claims immediately</b> — the payout becomes FAILED with the reason and the full amount returns to Available Balance.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-head"><span class="step-num">6.3</span><span class="step-title">How the amounts adjust — before vs after clicking Withdraw</span></div>
+    <div class="step-body">
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Card / record</th><th>Before withdraw</th><th>Right after withdraw (PROCESSING)</th><th>Payout succeeds (SUCCESS)</th><th>Payout fails (FAILED)</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="mono">Available Balance</td>
+              <td class="num">₹1,000</td>
+              <td class="num">₹0 <span class="status st-info">drops instantly</span></td>
+              <td class="num">₹0</td>
+              <td class="num">₹1,000 <span class="status st-pending">restored</span></td>
+            </tr>
+            <tr>
+              <td class="mono">Pending Balance</td>
+              <td class="num">₹0</td>
+              <td class="num">₹0</td>
+              <td class="num">₹0</td>
+              <td class="num">₹0</td>
+            </tr>
+            <tr>
+              <td class="mono">Lifetime Earnings</td>
+              <td class="num">₹1,000</td>
+              <td class="num">₹1,000</td>
+              <td class="num">₹1,000</td>
+              <td class="num">₹1,000</td>
+            </tr>
+            <tr>
+              <td class="mono">Earning status</td>
+              <td class="num">AVAILABLE</td>
+              <td class="num">AVAILABLE · payoutStatus PROCESSING <span class="status st-info">in withdrawal</span></td>
+              <td class="num">PAID <span class="status st-success">done</span></td>
+              <td class="num">AVAILABLE <span class="status st-pending">released</span></td>
+            </tr>
+            <tr>
+              <td class="mono">Recent Withdrawals</td>
+              <td class="num">—</td>
+              <td class="num">₹1,000 <span class="status st-pending">PROCESSING</span></td>
+              <td class="num">₹1,000 <span class="status st-success">SUCCESS</span> · UTR</td>
+              <td class="num">₹1,000 <span class="status st-failed">FAILED</span> · reason shown</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Webhook & history ── -->
+<section>
+  <h2 class="s-title">Step 7 — The money lands in the expert's bank</h2>
+  <div class="step-body">
+    <p>RazorpayX processes the transfer and calls our webhook. <code>payout.processed</code> marks the payout <span class="status st-success">SUCCESS</span> and flips the earnings to <code>PAID</code> (interaction payment status also closes to <code>PAID</code>). The expert's Recent Withdrawals then shows the UTR:</p>
+    <div class="mock">
+      <p class="mock-label">UI sample · Recent Withdrawals</p>
+      <div class="ui-card">
+        <div class="ui-card-title" style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);">Recent Withdrawals</div>
+        <div class="ui-list">
+          <div class="ui-list-item">
+            <div>
+              <div class="amt">₹1,000</div>
+              <div class="meta">21 Aug 2026 · Ref HDFCN00000000001</div>
+            </div>
+            <span class="status st-success">SUCCESS</span>
+          </div>
+          <div class="ui-list-item">
+            <div>
+              <div class="amt">₹2,500</div>
+              <div class="meta">18 Aug 2026</div>
+            </div>
+            <span class="status st-pending">PROCESSING</span>
+          </div>
+          <div class="ui-list-item">
+            <div>
+              <div class="amt">₹800</div>
+              <div class="meta">10 Aug 2026</div>
+              <div class="err">Gateway: invalid IFSC code for the beneficiary</div>
+            </div>
+            <span class="status st-failed">FAILED</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p>Failure events (<code>payout.reversed / failed / rejected / cancelled</code>) do the opposite: payout <span class="status st-failed">FAILED</span> with the reason shown in red, and the earnings are released back to AVAILABLE so the expert can fix their details and withdraw again. If a webhook is ever missed, an hourly reconcile worker re-checks every stuck payout with RazorpayX and applies the same transitions. A <code>processed</code> event arriving after a payout was already failed is <b>never</b> auto-flipped (double-pay protection) — it raises a critical log for manual admin review.</p>
+  </div>
+</section>
+
+<!-- ── Admin ── -->
+<section>
+  <h2 class="s-title">Step 8 — What the admin sees</h2>
+  <div class="step-body">
+    <p>Admin → Payouts lists every payout with its status, mode and gateway state. RazorpayX payouts resolve on their own; the manual buttons remain as an emergency fallback:</p>
+    <div class="mock">
+      <p class="mock-label">UI sample · Admin → Payouts (row)</p>
+      <div class="ui-card">
+        <div class="ui-list-item" style="border-bottom: none;">
+          <div>
+            <div class="amt">₹1,000 · Gaurav Kumar</div>
+            <div class="meta">•••• 6789 · HDFC0000053</div>
+            <div class="meta">RazorpayX · IMPS</div>
+          </div>
+          <div style="text-align: right;">
+            <span class="status st-pending">PROCESSING</span>
+            <div class="ui-row" style="margin-top: 8px; justify-content: flex-end;">
+              <span class="ui-btn btn-primary" style="font-size: 12px; padding: 5px 12px;">Mark Paid</span>
+              <span class="ui-btn btn-disabled" style="font-size: 12px; padding: 5px 12px;">Fail</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul>
+      <li><b>Mark Paid</b> stays enabled — the emergency override if a transfer happened but the system didn't record it (enter the UTR).</li>
+      <li><b>Fail</b> is disabled for RazorpayX-managed payouts — the money may already be moving, so failing the record can't stop the transfer.</li>
+      <li>When no RazorpayX keys are configured, payouts sit in PROCESSING and both buttons work — that's the old manual mode.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ── Lifecycle reference ── -->
+<section>
+  <h2 class="s-title">Full lifecycle reference — every status and balance</h2>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Moment</th><th>Earning status</th><th>Payout status</th><th>Available</th><th>Pending</th><th>Lifetime</th></tr></thead>
+      <tbody>
+        <tr><td>Session completed, payment held</td><td class="mono">PENDING</td><td class="mono">—</td><td class="num">—</td><td class="num">+ ₹1,000</td><td class="num">+ ₹1,000</td></tr>
+        <tr><td>Settlement window elapses, checks pass</td><td class="mono">AVAILABLE</td><td class="mono">—</td><td class="num">+ ₹1,000</td><td class="num">− ₹1,000</td><td class="num">same</td></tr>
+        <tr><td>Expert clicks Withdraw</td><td class="mono">AVAILABLE <span class="status st-info">claimed</span></td><td class="mono">PROCESSING</td><td class="num">− ₹1,000</td><td class="num">same</td><td class="num">same</td></tr>
+        <tr><td>Webhook payout.processed</td><td class="mono">PAID</td><td class="mono">SUCCESS</td><td class="num">same</td><td class="num">same</td><td class="num">same</td></tr>
+        <tr><td>Webhook payout.failed</td><td class="mono">AVAILABLE <span class="status st-info">released</span></td><td class="mono">FAILED</td><td class="num">+ ₹1,000</td><td class="num">same</td><td class="num">same</td></tr>
+        <tr><td>Client dispute / refund in progress</td><td class="mono">DISPUTED / blocked</td><td class="mono">—</td><td class="num">blocked</td><td class="num">in Pending</td><td class="num">same</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ── Guarantees ── -->
+<section>
+  <h2 class="s-title">Why the money can't be lost or double-paid</h2>
+  <div class="t-item">
+    <b>Atomic claims, everywhere</b>
+    <p>Earnings are claimed with MongoDB <code>findAndModify</code> before any payout is created — two rapid clicks on Withdraw can never pay the same earnings twice. Settlement uses the same pattern.</p>
+  </div>
+  <div class="t-item">
+    <b>Gateway idempotency</b>
+    <p>Every RazorpayX payout is sent with a unique <code>X-Payout-Idempotency</code> key tied to the payout id — if the network drops the response, a retry returns the same payout instead of a second transfer.</p>
+  </div>
+  <div class="t-item">
+    <b>Terminal-state guards</b>
+    <p>Duplicate webhooks and webhook-vs-worker races are no-ops: a SUCCESS payout ignores late failure events, and a FAILED payout is never auto-flipped to SUCCESS.</p>
+  </div>
+  <div class="t-item">
+    <b>Failure releases the money</b>
+    <p>Every failure path (below-minimum, gateway rejection, payout.failed webhook) returns the claimed earnings to AVAILABLE — the expert's balance is never stuck inside a dead payout.</p>
+  </div>
+  <div class="t-item">
+    <b>Reconcile worker</b>
+    <p>If a webhook is missed or the server was down, an hourly worker re-checks every stuck payout with RazorpayX and applies the real gateway outcome.</p>
+  </div>
+  <div class="t-item">
+    <b>Snapshot banking</b>
+    <p>The payout stores the bank details as they were at request time — the expert changing their details mid-flight can't redirect an existing withdrawal.</p>
+  </div>
+</section>
+
+<footer>
+  FlyHigh money flow · client payment → commission split → settlement → automatic RazorpayX payout ·
+  setup guide: docs/razorpayx-payout-setup.md · backend: ExpertPayoutService, SettlementService, PricingService, RazorpayXPayoutGateway
+</footer>
+
+</div>

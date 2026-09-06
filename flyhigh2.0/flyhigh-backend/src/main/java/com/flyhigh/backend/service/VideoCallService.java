@@ -2,6 +2,8 @@ package com.flyhigh.backend.service;
 
 import com.flyhigh.backend.dto.CallActionRequest;
 import com.flyhigh.backend.dto.CallRequestDto;
+import com.flyhigh.backend.dto.ExpertReviewRequest;
+import com.flyhigh.backend.dto.ExpertReviewResponse;
 import com.flyhigh.backend.dto.RatingRequest;
 import com.flyhigh.backend.model.*;
 import com.flyhigh.backend.model.NotificationPreferences;
@@ -29,6 +31,7 @@ public class VideoCallService {
     private final InteractionRepository interactionRepository;
     private final EmailService emailService;
     private final SessionStateService sessionStateService;
+    private final NotificationService notificationService;
     private final org.springframework.data.mongodb.core.MongoTemplate mongoTemplate;
 
     public VideoCallService(CallRequestRepository callRequestRepository,
@@ -37,6 +40,7 @@ public class VideoCallService {
                             InteractionRepository interactionRepository,
                             EmailService emailService,
                             SessionStateService sessionStateService,
+                            NotificationService notificationService,
                             org.springframework.data.mongodb.core.MongoTemplate mongoTemplate) {
         this.callRequestRepository = callRequestRepository;
         this.userRepository = userRepository;
@@ -44,6 +48,7 @@ public class VideoCallService {
         this.interactionRepository = interactionRepository;
         this.emailService = emailService;
         this.sessionStateService = sessionStateService;
+        this.notificationService = notificationService;
         this.mongoTemplate = mongoTemplate;
     }
 
@@ -99,16 +104,26 @@ public class VideoCallService {
         // ── Send email notification to expert (respects notification preferences) ──
         sendCallRequestNotification(expert, client);
 
+        // ── In-app notification to expert ──
+        String clientName = client.getFullName() != null ? client.getFullName() : client.getFirstName();
+        notificationService.createForUser(expertId, "video-call",
+                "New consultation request from " + clientName, null, client.getEmail());
+
         return toDto(callRequest);
     }
 
     /**
      * Expert accepts or rejects a call request.
      */
-    public CallRequestDto respondToCall(CallActionRequest request) {
+    public CallRequestDto respondToCall(CallActionRequest request, String callerUserId) {
         CallRequest callRequest = callRequestRepository.findById(request.getCallRequestId()).orElse(null);
         if (callRequest == null) {
             throw new IllegalArgumentException("Call request not found");
+        }
+
+        // Authorization: only the expert this request was routed to may respond
+        if (callerUserId == null || !callerUserId.equals(callRequest.getExpertId())) {
+            throw new SecurityException("Only the called expert can respond to this call request");
         }
 
         if (!"PENDING".equals(callRequest.getStatus())) {
@@ -156,24 +171,42 @@ public class VideoCallService {
         }
 
         callRequestRepository.save(callRequest);
+
+        // ── In-app notification to client ──
+        User expert = userRepository.findById(callRequest.getExpertId()).orElse(null);
+        String expertName = expert != null
+                ? (expert.getFullName() != null ? expert.getFullName() : expert.getFirstName())
+                : "The expert";
+        String message = "ACCEPT".equalsIgnoreCase(request.getAction())
+                ? expertName + " accepted your consultation request."
+                : expertName + " declined your consultation request.";
+        notificationService.createForUser(callRequest.getClientId(), "video-call",
+                message, callRequest.getRoomId(), callRequest.getClientEmail());
+
         return toDto(callRequest);
     }
 
     /**
      * Client polls for call request status.
+     * Only the call's participants (client or expert) may read its status.
      */
-    public CallRequestDto getCallRequestStatus(String callRequestId) {
+    public CallRequestDto getCallRequestStatus(String callRequestId, String callerUserId) {
         CallRequest callRequest = callRequestRepository.findById(callRequestId).orElse(null);
         if (callRequest == null) {
             throw new IllegalArgumentException("Call request not found");
         }
+        requireParticipant(callRequest, callerUserId);
         return toDto(callRequest);
     }
 
     /**
      * Get the latest pending call request for an expert.
+     * Only the expert themselves may check their pending calls.
      */
-    public CallRequestDto getPendingCallForExpert(String expertId) {
+    public CallRequestDto getPendingCallForExpert(String expertId, String callerUserId) {
+        if (callerUserId == null || !callerUserId.equals(expertId)) {
+            throw new SecurityException("Only the expert can view their own pending calls");
+        }
         var callRequest = callRequestRepository.findTopByExpertIdAndStatusOrderByCreatedAtDesc(expertId, "PENDING");
         return callRequest.map(this::toDto).orElse(null);
     }
@@ -189,11 +222,12 @@ public class VideoCallService {
     /**
      * End a call (set status to COMPLETED).
      */
-    public CallRequestDto endCall(String callRequestId) {
+    public CallRequestDto endCall(String callRequestId, String callerUserId) {
         CallRequest callRequest = callRequestRepository.findById(callRequestId).orElse(null);
         if (callRequest == null) {
             throw new IllegalArgumentException("Call request not found");
         }
+        requireParticipant(callRequest, callerUserId);
         callRequest.setStatus("COMPLETED");
         callRequest.setFeedbackPending(true);
         callRequest.setReviewSubmitted(false);
@@ -226,10 +260,14 @@ public class VideoCallService {
     /**
      * Client submits post-call rating and review.
      */
-    public CallRequestDto submitRating(RatingRequest request) {
+    public CallRequestDto submitRating(RatingRequest request, String callerUserId) {
         CallRequest callRequest = callRequestRepository.findById(request.getCallRequestId()).orElse(null);
         if (callRequest == null) {
             throw new IllegalArgumentException("Call request not found");
+        }
+        // Authorization: only the call's client can submit the rating
+        if (callerUserId == null || !callerUserId.equals(callRequest.getClientId())) {
+            throw new SecurityException("Only the client can rate this call");
         }
         if (Boolean.TRUE.equals(callRequest.getReviewSubmitted())) {
             throw new IllegalStateException("Rating has already been submitted and cannot be changed.");
@@ -247,6 +285,61 @@ public class VideoCallService {
         updateExpertRatingAtomically(callRequest.getExpertId());
 
         return toDto(callRequest);
+    }
+
+    /**
+     * Returns all submitted reviews for an expert's dashboard.
+     * Returns full review details including any expert response.
+     */
+    public List<ExpertReviewResponse> getExpertReviews(String expertId) {
+        List<CallRequest> reviewedCalls = callRequestRepository
+                .findByExpertIdAndReviewSubmittedTrueOrderByCreatedAtDesc(expertId);
+        return reviewedCalls.stream()
+                .map(cr -> {
+                    ExpertReviewResponse r = new ExpertReviewResponse();
+                    r.setCallRequestId(cr.getId());
+                    r.setClientName(cr.getClientName() != null ? cr.getClientName() : "Anonymous");
+                    r.setRating(cr.getRating());
+                    r.setReview(cr.getReview());
+                    r.setCreatedAt(cr.getCreatedAt());
+                    r.setExpertResponse(cr.getExpertResponse());
+                    r.setExpertRespondedAt(cr.getExpertRespondedAt());
+                    return r;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Expert submits a response/acknowledgment to a client review.
+     * Immutable — once submitted, the response cannot be changed.
+     */
+    public ExpertReviewResponse submitReviewResponse(ExpertReviewRequest request, String expertId) {
+        CallRequest callRequest = callRequestRepository.findById(request.getCallRequestId()).orElse(null);
+        if (callRequest == null) {
+            throw new IllegalArgumentException("Call request not found");
+        }
+        if (!expertId.equals(callRequest.getExpertId())) {
+            throw new IllegalArgumentException("Call request does not belong to this expert");
+        }
+        if (!Boolean.TRUE.equals(callRequest.getReviewSubmitted())) {
+            throw new IllegalStateException("Cannot respond to a review that has not been submitted yet");
+        }
+        if (callRequest.getExpertResponse() != null) {
+            throw new IllegalStateException("Response has already been submitted and cannot be changed.");
+        }
+        callRequest.setExpertResponse(request.getExpertResponse());
+        callRequest.setExpertRespondedAt(Instant.now());
+        callRequestRepository.save(callRequest);
+        log.info("Expert response submitted: callId={} expertId={}", request.getCallRequestId(), expertId);
+
+        ExpertReviewResponse response = new ExpertReviewResponse();
+        response.setClientName(callRequest.getClientName() != null ? callRequest.getClientName() : "Anonymous");
+        response.setRating(callRequest.getRating());
+        response.setReview(callRequest.getReview());
+        response.setCreatedAt(callRequest.getCreatedAt());
+        response.setExpertResponse(callRequest.getExpertResponse());
+        response.setExpertRespondedAt(callRequest.getExpertRespondedAt());
+        return response;
     }
 
     /**
@@ -313,15 +406,35 @@ public class VideoCallService {
     }
 
     /**
-     * Get all pending feedback for a client (calls that ended but no review submitted).
-     * Uses clientEmail since the frontend AuthUser exposes email, not MongoDB ID.
+     * Get pending feedback for a client (calls that ended but no review submitted).
+     * Only returns calls where the client actually PAID — free trial sessions
+     * without payment are excluded from the feedback reminder.
      */
     public List<CallRequestDto> getPendingFeedbackForClient(String clientEmail) {
         List<CallRequest> allCalls = callRequestRepository.findByClientEmailOrderByCreatedAtDesc(clientEmail);
         return allCalls.stream()
                 .filter(c -> "COMPLETED".equals(c.getStatus()) && Boolean.TRUE.equals(c.getFeedbackPending()))
+                .filter(c -> {
+                    // Only show feedback reminder for PAID sessions
+                    if (c.getInteractionId() == null) return false;
+                    return interactionRepository.findById(c.getInteractionId())
+                            .map(i -> i.getTotalPaidAmount() != null && i.getTotalPaidAmount() > 0)
+                            .orElse(false);
+                })
                 .map(this::toDto)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Ensures the caller is either the client or the expert of the call request.
+     */
+    private void requireParticipant(CallRequest callRequest, String callerUserId) {
+        boolean isParticipant = callerUserId != null
+                && (callerUserId.equals(callRequest.getClientId())
+                    || callerUserId.equals(callRequest.getExpertId()));
+        if (!isParticipant) {
+            throw new SecurityException("Only call participants can perform this action");
+        }
     }
 
     /**
@@ -381,6 +494,20 @@ public class VideoCallService {
         dto.setReviewSubmitted(callRequest.getReviewSubmitted());
         dto.setFeedbackPending(callRequest.getFeedbackPending());
         dto.setInteractionId(callRequest.getInteractionId());
+
+        // Populate payment info from Interaction if available
+        if (callRequest.getInteractionId() != null) {
+            interactionRepository.findById(callRequest.getInteractionId()).ifPresent(interaction -> {
+                dto.setTotalPaidAmount(interaction.getTotalPaidAmount());
+                dto.setExpertAmount(interaction.getExpertAmount());
+                dto.setPaymentStatus(interaction.getPaymentStatus() != null
+                        ? interaction.getPaymentStatus().name() : null);
+                dto.setDurationMinutes(interaction.getActualDurationMinutes() != null
+                        ? interaction.getActualDurationMinutes()
+                        : interaction.getScheduledDurationMinutes());
+            });
+        }
+
         return dto;
     }
 }

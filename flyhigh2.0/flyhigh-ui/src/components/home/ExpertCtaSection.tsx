@@ -1,5 +1,6 @@
 import { ArrowRight, Clock, IndianRupee, Users } from "lucide-react"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -9,17 +10,40 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { useAuth } from "@/contexts/AuthContext"
 
 import { Reveal } from "./Reveal"
 import { SectionLabel } from "./SectionLabel"
 
-const expertStats = [
-  { icon: IndianRupee, value: "₹50,000+", label: "Average Monthly Earnings" },
-  { icon: Users, value: "500+", label: "Experts" },
-  { icon: Clock, value: "10 min", label: "Setup" },
-] as const
+interface ExpertCtaSectionProps {
+  verifiedExperts?: number | null
+}
 
-export function ExpertCtaSection() {
+export function ExpertCtaSection({ verifiedExperts }: ExpertCtaSectionProps) {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+
+  const expertCount = verifiedExperts
+    ? `${verifiedExperts.toLocaleString("en-IN")}+`
+    : "500+"
+
+  const expertStats = [
+    { icon: IndianRupee, value: "₹50,000+", label: "Average Monthly Earnings" },
+    { icon: Users, value: expertCount, label: "Experts" },
+    { icon: Clock, value: "10 min", label: "Setup" },
+  ] as const
+
+  const handleApplyAsExpert = () => {
+    if (user) {
+      navigate("/expert/profile")
+    } else {
+      navigate("/signup?role=expert")
+    }
+  }
+
+  const handleLearnMore = () => {
+    navigate("/how-it-works")
+  }
   const [sessions, setSessions] = useState(20)
   const [rate, setRate] = useState(800)
   const estimatedEarnings = sessions * rate
@@ -62,6 +86,7 @@ export function ExpertCtaSection() {
           <div className="mt-10 flex flex-wrap gap-3">
             <Button
               size="lg"
+              onClick={handleApplyAsExpert}
               className="h-11 gap-2 bg-[var(--flyhigh-primary)] hover:bg-[var(--flyhigh-primary-hover)]"
             >
               Apply As Expert
@@ -70,6 +95,7 @@ export function ExpertCtaSection() {
             <Button
               size="lg"
               variant="outline"
+              onClick={handleLearnMore}
               className="h-11 border-slate-500 bg-transparent text-white hover:bg-white/10 hover:text-white"
             >
               Learn More
