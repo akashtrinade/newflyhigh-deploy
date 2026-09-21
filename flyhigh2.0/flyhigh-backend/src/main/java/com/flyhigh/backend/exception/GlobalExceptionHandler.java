@@ -130,7 +130,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(500)
             .body(Map.of(
                 "success", false,
-                "message", "An unexpected error occurred. Please try again later."
+                "message", "An unexpected error occurred: " + ex.getMessage()
             ));
     }
 }
