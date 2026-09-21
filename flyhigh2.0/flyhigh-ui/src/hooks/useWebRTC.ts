@@ -289,15 +289,17 @@ export function useWebRTC(roomId: string | null, userEmail: string, role: string
             pendingScreenStreamRef.current = event.streams[0]
           }
           setIsRemoteScreenSharing(true)
-          // Listen for track ending
-          track.onended = () => {
-            debug(`[WebRTC:${role}] Remote screen share track ended`)
+          // Listen for track ending or muting (Chrome often fires onmute instead of onended on renegotiation)
+          const handleScreenTrackEnd = () => {
+            debug(`[WebRTC:${role}] Remote screen share track ended/muted`)
             setIsRemoteScreenSharing(false)
             pendingScreenStreamRef.current = null
             if (screenVideoRef.current) {
               screenVideoRef.current.srcObject = null
             }
           }
+          track.onended = handleScreenTrackEnd
+          track.onmute = handleScreenTrackEnd
         } else {
           // First video track — the camera
           if (remoteVideoRef.current && event.streams[0]) {
