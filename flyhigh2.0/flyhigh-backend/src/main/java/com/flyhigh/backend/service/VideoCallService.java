@@ -101,8 +101,10 @@ public class VideoCallService {
 
         log.info("Call request created: client={} expert={} callId={}", clientId, expertId, callRequest.getId());
 
-        // ── Send email notification to expert (respects notification preferences) ──
-        sendCallRequestNotification(expert, client);
+        // ── Send email notification to expert in background thread ──
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            sendCallRequestNotification(expert, client);
+        });
 
         // ── In-app notification to expert ──
         String clientName = client.getFullName() != null ? client.getFullName() : client.getFirstName();
