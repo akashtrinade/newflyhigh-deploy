@@ -83,6 +83,7 @@ public class EmailService {
      * Sends a notification email to an expert when a new call request is received.
      * SILENT FAILURE — email delivery failure never blocks the call request flow.
      */
+    @org.springframework.scheduling.annotation.Async
     public void sendCallRequestNotification(String expertEmail, String expertName,
                                             String clientName, String clientEmail) {
         try {
@@ -143,6 +144,7 @@ public class EmailService {
      * Sends a contact form submission to the FlyHigh support inbox.
      * Side-effect only — does NOT block the HTTP response.
      */
+    @org.springframework.scheduling.annotation.Async
     public void sendContactFormEmail(String fromName, String fromEmail,
                                      String subject, String messageBody) {
         try {
